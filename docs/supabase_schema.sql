@@ -1,6 +1,20 @@
 -- Supabase PostgreSQL Schema for AI Academic Scheduler
 -- Run this in Supabase SQL Editor
 
+-- Create guest user in auth.users (for guest mode uploads)
+-- This must be done first before creating the users table
+INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, created_at, updated_at, raw_user_meta_data)
+VALUES (
+  '00000000-0000-0000-0000-000000000000'::uuid,
+  'guest@example.com',
+  crypt('guest_password_123', gen_salt('bf')),
+  now(),
+  now(),
+  now(),
+  '{"name": "Guest User"}'::jsonb
+)
+ON CONFLICT (id) DO NOTHING;
+
 -- Users table (extends Supabase auth)
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,

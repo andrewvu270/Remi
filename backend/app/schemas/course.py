@@ -5,8 +5,7 @@ from datetime import datetime
 class CourseBase(BaseModel):
     name: str
     code: str
-    semester: str
-    year: int
+    description: Optional[str] = None
 
 class CourseCreate(CourseBase):
     pass
@@ -14,8 +13,7 @@ class CourseCreate(CourseBase):
 class CourseUpdate(BaseModel):
     name: Optional[str] = None
     code: Optional[str] = None
-    semester: Optional[str] = None
-    year: Optional[int] = None
+    description: Optional[str] = None
 
 class CourseInDBBase(CourseBase):
     id: str

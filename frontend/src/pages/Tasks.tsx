@@ -17,38 +17,36 @@ import {
   Dialog,
   TextField,
   MenuItem,
+  Card,
+  CardContent,
+  Grid,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import {
   Add as AddIcon,
   CheckCircle as CheckCircleIcon,
   Schedule as ScheduleIcon,
 } from '@mui/icons-material';
+import { fetchAllTasks } from '../utils/taskStorage';
+import { enhanceTasksWithPredictions } from '../utils/predictionService';
+import { Task } from '../types/task';
+import StudyPlanGenerator from '../components/StudyPlanGenerator';
 
-interface Task {
-  id: string;
-  title: string;
-  task_type: string;
-  due_date: string;
-  weight_score: number;
-  predicted_hours: number;
-  priority_score: number;
-  status: string;
-  grade_percentage: number;
-  course_code: string;
-}
+// Using the Task type from types/task.ts
 
-interface TasksResponse {
-  tasks: Task[];
-  total: number;
-}
 
 const Tasks: React.FC = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
+  const [openStudyPlan, setOpenStudyPlan] = useState(false);
   const [sortBy, setSortBy] = useState<'deadline' | 'priority'>('deadline');
-  const [filterBy, setFilterBy] = useState<'all' | 'pending' | 'completed'>('pending');
+  const [filterBy, setFilterBy] = useState<'all' | 'pending' | 'completed'>('all');
   const [newTask, setNewTask] = useState({
     title: '',
     task_type: 'Assignment',
@@ -64,11 +62,17 @@ const Tasks: React.FC = () => {
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8000/api/tasks');
-      if (!response.ok) throw new Error('Failed to fetch tasks');
-      const data: TasksResponse = await response.json();
-      setTasks(data.tasks);
-      setError(null);
+      const data = await fetchAllTasks();
+      
+      // Enhance tasks with predictions
+      try {
+        const enhancedTasks = await enhanceTasksWithPredictions(data.tasks);
+        setTasks(enhancedTasks);
+      } catch (predictionError) {
+        console.error('Error getting predictions:', predictionError);
+        // Fall back to original tasks if prediction fails
+        setTasks(data.tasks);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load tasks');
     } finally {
@@ -145,18 +149,20 @@ const Tasks: React.FC = () => {
       if (sortBy === 'deadline') {
         return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
       } else {
-        // Sort by priority: considers urgency (days until due) + importance (grade %)
+        // Use the model's priority score if available, otherwise fall back to a simple calculation
+        if (a.priority_score !== undefined && b.priority_score !== undefined) {
+          // Sort by model's priority score (higher = more important)
+          return b.priority_score - a.priority_score;
+        }
+        
+        // Fallback to simple priority calculation if model score is not available
         const now = new Date();
-        const daysUntilA = Math.ceil((new Date(a.due_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        const daysUntilB = Math.ceil((new Date(b.due_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        const daysUntilA = Math.max(0, (new Date(a.due_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        const daysUntilB = Math.max(0, (new Date(b.due_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
         
-        // Calculate urgency score (lower days = higher urgency)
-        const urgencyA = Math.max(0, 10 - daysUntilA); // 0-10 scale
-        const urgencyB = Math.max(0, 10 - daysUntilB);
-        
-        // Combined score: 60% urgency + 40% importance (grade %)
-        const scoreA = urgencyA * 0.6 + (a.grade_percentage / 100) * 10 * 0.4;
-        const scoreB = urgencyB * 0.6 + (b.grade_percentage / 100) * 10 * 0.4;
+        // Simple fallback: 70% urgency, 30% grade importance
+        const scoreA = (10 / (1 + daysUntilA) * 0.7) + (a.grade_percentage * 0.03);
+        const scoreB = (10 / (1 + daysUntilB) * 0.7) + (b.grade_percentage * 0.03);
         
         return scoreB - scoreA; // Higher score first
       }
@@ -165,69 +171,142 @@ const Tasks: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
-        <CircularProgress />
+      <Container 
+        maxWidth="lg" 
+        sx={{ 
+          mt: { xs: 2, md: 4 }, 
+          mb: { xs: 2, md: 4 },
+          px: { xs: 1, sm: 2, md: 3 }
+        }}
+      >
+        {loading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+            <CircularProgress />
+          </Box>
+        )}
       </Container>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h3" component="h1" sx={{ fontWeight: 'bold' }}>
+    <Container 
+      maxWidth="lg" 
+      sx={{ 
+        mt: { xs: 2, md: 4 }, 
+        mb: { xs: 2, md: 4 },
+        px: { xs: 1, sm: 2, md: 3 }
+      }}
+    >
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: { xs: 'column', sm: 'row' },
+        justifyContent: 'space-between', 
+        alignItems: { xs: 'flex-start', sm: 'center' }, 
+        mb: { xs: 2, md: 4 },
+        gap: { xs: 2, sm: 0 }
+      }}>
+        <Typography 
+          variant="h3" 
+          component="h1" 
+          sx={{ 
+            fontWeight: 'bold',
+            fontSize: { xs: '1.75rem', sm: '2.125rem', md: '2.5rem' }
+          }}
+        >
           Tasks
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setOpenDialog(true)}
-        >
-          Add Task
-        </Button>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: 2,
+          width: { xs: '100%', sm: 'auto' }
+        }}>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            startIcon={<AddIcon />}
+            onClick={() => setOpenDialog(true)}
+            fullWidth={isMobile}
+            sx={{ minHeight: '44px' }}
+          >
+            Add Task
+          </Button>
+          <Button 
+            variant="outlined" 
+            color="primary"
+            onClick={() => setOpenStudyPlan(true)}
+            disabled={tasks.length === 0}
+            fullWidth={isMobile}
+            sx={{ minHeight: '44px' }}
+          >
+            Generate Study Plan
+          </Button>
+        </Box>
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
       {/* Filter and Sort Controls */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: { xs: 'column', sm: 'row' },
+        gap: 2, 
+        mb: 3, 
+        alignItems: { xs: 'stretch', sm: 'center' }
+      }}>
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 1,
+          flexWrap: 'wrap',
+          justifyContent: { xs: 'center', sm: 'flex-start' }
+        }}>
           <Button
             variant={filterBy === 'pending' ? 'contained' : 'outlined'}
             onClick={() => setFilterBy('pending')}
-            size="small"
+            size={isMobile ? 'medium' : 'small'}
+            sx={{ minHeight: '36px', flex: { xs: 1, sm: 'none' } }}
           >
             Pending
           </Button>
           <Button
             variant={filterBy === 'completed' ? 'contained' : 'outlined'}
             onClick={() => setFilterBy('completed')}
-            size="small"
+            size={isMobile ? 'medium' : 'small'}
+            sx={{ minHeight: '36px', flex: { xs: 1, sm: 'none' } }}
           >
             Completed
           </Button>
           <Button
             variant={filterBy === 'all' ? 'contained' : 'outlined'}
             onClick={() => setFilterBy('all')}
-            size="small"
+            size={isMobile ? 'medium' : 'small'}
+            sx={{ minHeight: '36px', flex: { xs: 1, sm: 'none' } }}
           >
             All
           </Button>
         </Box>
 
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 1,
+          flexWrap: 'wrap',
+          justifyContent: { xs: 'center', sm: 'flex-start' }
+        }}>
           <Button
             variant={sortBy === 'deadline' ? 'contained' : 'outlined'}
             onClick={() => setSortBy('deadline')}
-            size="small"
+            size={isMobile ? 'medium' : 'small'}
+            sx={{ minHeight: '36px', flex: { xs: 1, sm: 'none' } }}
           >
-            Sort: Deadline
+            {isMobile ? 'Deadline' : 'Sort: Deadline'}
           </Button>
           <Button
             variant={sortBy === 'priority' ? 'contained' : 'outlined'}
             onClick={() => setSortBy('priority')}
-            size="small"
+            size={isMobile ? 'medium' : 'small'}
+            sx={{ minHeight: '36px', flex: { xs: 1, sm: 'none' } }}
           >
-            Sort: Priority
+            {isMobile ? 'Priority' : 'Sort: Priority'}
           </Button>
         </Box>
       </Box>
@@ -239,7 +318,116 @@ const Tasks: React.FC = () => {
             No tasks yet. Add one to get started!
           </Typography>
         </Paper>
+      ) : isMobile ? (
+        // Mobile Card View
+        <Grid container spacing={2}>
+          {getFilteredAndSortedTasks().map((task) => (
+            <Grid item xs={12} key={task.id}>
+              <Card 
+                sx={{ 
+                  backgroundColor: task.status === 'completed' ? '#f5f5f5' : 'inherit',
+                  opacity: task.status === 'completed' ? 0.7 : 1,
+                  border: task.status === 'overdue' ? '2px solid #d32f2f' : 'none'
+                }}
+              >
+                <CardContent sx={{ pb: 1 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        fontWeight: 'bold',
+                        color: task.status === 'completed' ? '#999' : 'inherit',
+                        fontSize: '1.1rem'
+                      }}
+                    >
+                      {task.title}
+                    </Typography>
+                    <Chip
+                      label={task.status}
+                      color={task.status === 'completed' ? 'success' : 'default'}
+                      size="small"
+                      onClick={() => handleCompleteTask(task.id)}
+                      clickable
+                      icon={task.status === 'completed' ? <CheckCircleIcon /> : undefined}
+                    />
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                    <Chip 
+                      label={task.task_type} 
+                      color={getTaskTypeColor(task.task_type)} 
+                      size="small" 
+                    />
+                    <Chip 
+                      label={task.course_code} 
+                      variant="outlined" 
+                      size="small" 
+                    />
+                  </Box>
+
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="textSecondary">
+                        Due Date
+                      </Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                        {new Date(task.due_date).toLocaleDateString()}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="textSecondary">
+                        Time Left
+                      </Typography>
+                      <Typography 
+                        variant="body1" 
+                        sx={{ 
+                          fontWeight: 'bold',
+                          color: getHoursRemaining(task.due_date) === 'Overdue' ? '#d32f2f' : 'inherit'
+                        }}
+                      >
+                        {getHoursRemaining(task.due_date)}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="textSecondary">
+                        Est. Hours
+                      </Typography>
+                      <Typography 
+                        variant="body1" 
+                        sx={{ 
+                          fontWeight: 'bold',
+                          color: task.predicted_hours > 8 
+                            ? '#d32f2f' 
+                            : task.predicted_hours > 4 
+                              ? '#ed6c02' 
+                              : '#2e7d32'
+                        }}
+                      >
+                        {task.predicted_hours?.toFixed(1)}h
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="textSecondary">
+                        Grade %
+                      </Typography>
+                      <Typography 
+                        variant="body1" 
+                        sx={{ 
+                          fontWeight: 'bold',
+                          color: task.grade_percentage >= 20 ? '#d32f2f' : 'inherit'
+                        }}
+                      >
+                        {task.grade_percentage}%
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
       ) : (
+        // Desktop Table View
         <TableContainer component={Paper}>
           <Table>
             <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
@@ -249,6 +437,7 @@ const Tasks: React.FC = () => {
                 <TableCell sx={{ fontWeight: 'bold' }}>Type</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Due Date</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Time Left</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Est. Hours</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Grade %</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
               </TableRow>
@@ -277,6 +466,18 @@ const Tasks: React.FC = () => {
                   </TableCell>
                   <TableCell sx={{ fontWeight: 'bold', color: task.status === 'completed' ? '#999' : getHoursRemaining(task.due_date) === 'Overdue' ? '#d32f2f' : 'inherit' }}>
                     {getHoursRemaining(task.due_date)}
+                  </TableCell>
+                  <TableCell sx={{ 
+                    fontWeight: 'bold', 
+                    color: task.status === 'completed' 
+                      ? '#999' 
+                      : task.predicted_hours > 8 
+                        ? '#d32f2f' 
+                        : task.predicted_hours > 4 
+                          ? '#ed6c02' 
+                          : '#2e7d32'
+                  }}>
+                    {task.predicted_hours?.toFixed(1)}h
                   </TableCell>
                   <TableCell sx={{ fontWeight: 'bold', color: task.status === 'completed' ? '#999' : task.grade_percentage >= 20 ? '#d32f2f' : 'inherit' }}>
                     {task.grade_percentage}%
@@ -350,6 +551,12 @@ const Tasks: React.FC = () => {
           </Box>
         </Box>
       </Dialog>
+      
+      <StudyPlanGenerator 
+        open={openStudyPlan}
+        onClose={() => setOpenStudyPlan(false)}
+        tasks={tasks}
+      />
     </Container>
   );
 };

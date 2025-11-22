@@ -1,48 +1,38 @@
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 from .config import settings
 from supabase import create_client
+from sqlalchemy.ext.declarative import declarative_base
+import os
 
-# Determine database URL
-# Priority: Supabase > SQLite
+# Supabase client setup (REST API for all data operations)
+supabase = None
+supabase_admin = None
+
 if settings.SUPABASE_URL and settings.SUPABASE_KEY:
-    # Use Supabase PostgreSQL
-    # Convert Supabase URL to SQLAlchemy format
-    supabase_url = settings.SUPABASE_URL
-    supabase_key = settings.SUPABASE_KEY
+    # Regular client with RLS (for authenticated users)
+    supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+    print("✓ Using Supabase REST API for all data operations")
     
-    # Extract PostgreSQL connection string from Supabase
-    # Format: https://[project-id].supabase.co
-    # We need to construct: postgresql://postgres:[password]@[host]:[port]/postgres
-    database_url = f"postgresql://postgres:{settings.SUPABASE_SERVICE_ROLE_KEY}@db.{supabase_url.split('//')[1].split('.')[0]}.supabase.co:5432/postgres"
-else:
-    # Fallback to SQLite for local development
-    database_url = settings.DATABASE_URL or "sqlite:///./academic_scheduler.db"
+    # Admin client with service role key (bypasses RLS for guest/admin operations)
+    if settings.SUPABASE_SERVICE_ROLE_KEY:
+        supabase_admin = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
+        print("✓ Service role client initialized for admin operations")
 
-# SQLAlchemy setup for ORM
-if database_url.startswith('sqlite'):
-    engine = create_engine(database_url, connect_args={"check_same_thread": False})
-else:
-    # PostgreSQL connection
-    engine = create_engine(database_url, pool_pre_ping=True, echo=False)
-
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Dummy Base for backward compatibility with models
 Base = declarative_base()
 
-# Supabase client setup (only if credentials are provided)
-supabase = None
-if settings.SUPABASE_URL and settings.SUPABASE_KEY:
-    supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+def get_supabase():
+    """Get Supabase client instance for REST API operations"""
+    if supabase is None:
+        raise RuntimeError("Supabase client not initialized. Check SUPABASE_URL and SUPABASE_KEY.")
+    return supabase
+
+def get_supabase_admin():
+    """Get Supabase admin client (bypasses RLS) for guest/admin operations"""
+    if supabase_admin is None:
+        # Fallback to regular client if admin key not available
+        return get_supabase()
+    return supabase_admin
 
 def get_db():
-    """Get SQLAlchemy database session"""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-def get_supabase():
-    """Get Supabase client instance"""
-    return supabase
+    """Dummy function for backward compatibility - routes should use get_supabase() instead"""
+    return get_supabase()
