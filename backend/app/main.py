@@ -51,58 +51,16 @@ async def root(request: Request):
 async def health_check(request: Request):
     return {"status": "healthy"}
 
-# Include routers with rate limiting
-app.include_router(
-    courses.router,
-    prefix="/api/courses",
-    tags=["courses"],
-    dependencies=[Depends(limiter.limit("100/hour"))]
-)
-app.include_router(
-    tasks.router,
-    prefix="/api/tasks",
-    tags=["tasks"],
-    dependencies=[Depends(limiter.limit("200/hour"))]
-)
-app.include_router(
-    schedule.router,
-    prefix="/api/schedule",
-    tags=["schedule"],
-    dependencies=[Depends(limiter.limit("100/hour"))]
-)
-app.include_router(
-    upload.router,
-    prefix="/api/upload",
-    tags=["upload"],
-    dependencies=[Depends(limiter.limit("100/hour"))]
-)
-app.include_router(
-    ml.router,
-    prefix="/api/ml",
-    tags=["ml"],
-    dependencies=[Depends(limiter.limit("100/hour"))]
-)
-app.include_router(
-    auth.router,
-    tags=["auth"],
-    dependencies=[Depends(limiter.limit("100/hour"))]
-)
-app.include_router(
-    survey.router,
-    tags=["survey"],
-    dependencies=[Depends(limiter.limit("100/hour"))]
-)
-app.include_router(
-    guest.router,
-    tags=["guest"],
-    dependencies=[Depends(limiter.limit("100/hour"))]
-)
-app.include_router(
-    study_plan.router,
-    prefix="/api/study-plan",
-    tags=["study-plan"],
-    dependencies=[Depends(limiter.limit("100/hour"))]
-)
+# Include routers (rate limiting will be applied at individual endpoint level)
+app.include_router(courses.router, prefix="/api/courses", tags=["courses"])
+app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
+app.include_router(schedule.router, prefix="/api/schedule", tags=["schedule"])
+app.include_router(upload.router, prefix="/api/upload", tags=["upload"])
+app.include_router(ml.router, prefix="/api/ml", tags=["ml"])
+app.include_router(auth.router, tags=["auth"])
+app.include_router(survey.router, tags=["survey"])
+app.include_router(guest.router, tags=["guest"])
+app.include_router(study_plan.router, prefix="/api/study-plan", tags=["study-plan"])
 
 if __name__ == "__main__":
     import uvicorn
