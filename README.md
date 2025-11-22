@@ -2,21 +2,13 @@
 
 An intelligent academic planning system that helps students optimize their study schedules by extracting deadlines from syllabi, predicting workload, and generating optimized daily study plans using machine learning.
 
-##  Documentation
-
-For detailed documentation, see the [docs/](docs/) directory:
-
-- **[Installation Guide](docs/installation.md)** - Complete setup instructions including development environment
-- **[System Architecture](docs/architecture.md)** - Component overview and data flow
-- **[Machine Learning Guide](docs/machine-learning.md)** - ML model training and management
-- **[Development Guide](docs/development.md)** - Development workflow and best practices
-- **[API Reference](docs/api-reference.md)** - Complete endpoint documentation
-- **[Deployment Guide](docs/deployment.md)** - Production deployment instructions
-
 ## 🚀 Features
 
 - **📄 Syllabus Processing**: Upload PDF or image syllabi and automatically extract all assignments, exams, and deadlines
 - **🤖 AI-Powered Extraction**: Uses OpenAI GPT to intelligently parse and categorize academic tasks
+- **👤 Guest Mode**: Try the app without creating an account - data stored locally in browser
+- **☁️ Cloud Sync**: Logged-in users get automatic cloud storage and sync across devices
+- **🔄 Seamless Migration**: Guest data automatically migrates to cloud when you create an account
 - **⚖️ Smart Weighting**: Automatically calculates task importance based on grade percentage, task type, and instructor emphasis
 - **📊 Workload Prediction**: ML models predict how much time each task will take based on historical data
 - **📅 Optimized Scheduling**: Generates daily and weekly study schedules optimized for productivity
@@ -48,40 +40,62 @@ For detailed documentation, see the [docs/](docs/) directory:
 
 ## 📋 Usage Guide
 
-### 1. Create an Account
+### Guest Mode (No Account Required)
 
-1. Navigate to the application
-2. Click "Sign Up"
-3. Enter your email and password
-4. Verify your email if required
+1. **Start Using Immediately**
+   - Navigate to the application
+   - Upload syllabi and manage tasks without signing up
+   - All data stored locally in your browser
 
-### 2. Add a Course
+2. **Upload a Syllabus**
+   - Go to Dashboard
+   - Click "Upload Syllabus" 
+   - Select a PDF file
+   - Tasks are automatically extracted and stored locally
 
-1. Go to the "Courses" page
-2. Click "Add Course"
-3. Enter course details (name, code, semester)
-4. Save the course
+3. **View Tasks & Schedule**
+   - Tasks appear in the Tasks page
+   - Schedule view shows upcoming deadlines
+   - All features work without an account
 
-### 3. Upload a Syllabus
+### Registered Users
 
-1. Select a course
-2. Click "Upload Syllabus"
-3. Choose a PDF or image file
-4. Wait for AI processing
-5. Review extracted tasks and make corrections if needed
+1. **Create an Account**
+   - Click "Sign Up"
+   - Enter email and password
+   - Your guest data automatically migrates to the cloud
 
-### 4. View Your Schedule
+2. **Benefits of Registration**
+   - Data synced across all devices
+   - Permanent cloud storage
+   - Access from anywhere
+   - Never lose your data
 
-1. Go to the "Schedule" page
-2. Set your available study hours
-3. View your optimized daily schedule
-4. Check off completed tasks
+### Core Features
 
-### 5. Track Progress
+1. **Upload a Syllabus**
+   - Navigate to Dashboard
+   - Click "Upload Syllabus"
+   - Choose a PDF file
+   - AI extracts all tasks, deadlines, and weights
+   - Review and edit if needed
 
-1. Use the timer to track study sessions
-2. Mark tasks as complete
-3. View analytics on your study habits
+2. **View Your Schedule**
+   - Go to "Schedule" page
+   - See calendar view of all tasks
+   - Click on dates to see task details
+   - Track upcoming deadlines
+
+3. **Manage Tasks**
+   - View all tasks in "Tasks" page
+   - Sort by deadline or priority
+   - Mark tasks as complete
+   - Track your progress
+
+4. **Track Progress**
+   - Monitor completion rates
+   - View study analytics
+   - Track time spent on tasks
 
 ## 🗺️ Roadmap
 
@@ -121,35 +135,3 @@ For detailed documentation, see the [docs/](docs/) directory:
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
-
-### Development Guidelines
-
-- Follow the existing code style
-- Write tests for new features
-- Update documentation
-- Ensure all tests pass
-- Use descriptive commit messages
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- OpenAI for the GPT API
-- FastAPI for the web framework
-- React for the frontend framework
-- All contributors and users of this project
-
-## 📞 Support
-
-If you encounter any issues or have questions:
-
-1. Check the [Installation Guide](docs/installation.md)
-2. Search existing [Issues](https://github.com/yourusername/ai-academic-scheduler/issues)
-3. Create new issue with detailed information
-4. Contact the development team
-
----
-
-**Built with ❤️ for students everywhere**
