@@ -1,7 +1,7 @@
 {
-  "name": "ai-academic-scheduler",
+  "name": "academic-scheduler",
   "version": "0.1.0",
-  "description": "AI Academic Scheduler - Intelligent study planning system",
+  "description": "Academic Scheduler - Intelligent study planning system",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.11.0",

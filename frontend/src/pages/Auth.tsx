@@ -194,7 +194,7 @@ const Auth: React.FC = () => {
       <Paper sx={{ p: 4 }}>
         <Box sx={{ textAlign: 'center', mb: 4 }}>
           <Typography variant="h3" component="h1" sx={{ fontWeight: 'bold', mb: 2 }}>
-            AI Academic Scheduler
+            Academic Scheduler
           </Typography>
           <Typography variant="body1" color="textSecondary">
             Manage your tasks and deadlines intelligently

@@ -152,7 +152,7 @@ const Navigation: React.FC = () => {
               fontSize: { xs: '1rem', sm: '1.25rem' }
             }}
           >
-            📚 AI Academic Scheduler
+            📚 Academic Scheduler
           </Typography>
 
           {/* Desktop Navigation */}

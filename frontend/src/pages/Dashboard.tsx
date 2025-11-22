@@ -263,7 +263,7 @@ const Dashboard: React.FC = () => {
       {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="h3" component="h1" sx={{ fontWeight: 'bold', mb: 1 }}>
-          Welcome to AI Academic Scheduler
+          Welcome to Academic Scheduler
         </Typography>
         <Typography variant="body1" color="textSecondary">
           Manage your courses, track deadlines, and optimize your study schedule
