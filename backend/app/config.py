@@ -36,7 +36,9 @@ class Settings(BaseSettings):
         "http://localhost:8000", 
         "http://127.0.0.1:3000", 
         "http://127.0.0.1:8000",
-        "https://your-frontend-domain.com"  # Replace with actual production domain
+        "http://10.0.0.26:3000",  # Your local network IP
+        "https://academic-scheduler.andrewvu270.workers.dev",  # Your Cloudflare Pages domain
+        "*"  # Allow all origins temporarily (remove this in production)
     ]
     
     class Config:
