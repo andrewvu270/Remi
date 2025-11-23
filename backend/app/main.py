@@ -18,22 +18,22 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
-# Initialize FastAPI with middleware
-middleware = [
-    Middleware(
-        CORSMiddleware,
-        allow_origins=settings.BACKEND_CORS_ORIGINS,
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
-        allow_headers=["*"],
-        expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"]
-    )
-]
+# Debug: Print CORS origins
+print("CORS Origins:", settings.BACKEND_CORS_ORIGINS)
 
 app = FastAPI(
     title="AI Academic Scheduler",
-    version="1.0.0",
-    middleware=middleware
+    version="1.0.0"
+)
+
+# Add CORS middleware directly to app
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["*"],
+    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"]
 )
 
 # Add rate limiter to the app state

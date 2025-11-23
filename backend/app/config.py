@@ -30,16 +30,8 @@ class Settings(BaseSettings):
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
     UPLOAD_DIR: str = "uploads"
     
-    # CORS - Production should only include specific domains
-    BACKEND_CORS_ORIGINS: list[str] = [
-        "http://localhost:3000", 
-        "http://localhost:8000", 
-        "http://127.0.0.1:3000", 
-        "http://127.0.0.1:8000",
-        "http://10.0.0.26:3000",  # Your local network IP
-        "https://academic-scheduler.andrewvu270.workers.dev",  # Your Cloudflare Pages domain
-        "*"  # Allow all origins temporarily (remove this in production)
-    ]
+    # CORS - Allow all origins temporarily for debugging
+    BACKEND_CORS_ORIGINS: list[str] = ["*"]
     
     class Config:
         # Pydantic will read from environment variables
