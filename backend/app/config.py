@@ -30,8 +30,15 @@ class Settings(BaseSettings):
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
     UPLOAD_DIR: str = "uploads"
     
-    # CORS - Allow all origins temporarily for debugging
-    BACKEND_CORS_ORIGINS: list[str] = ["*"]
+    # # CORS - Allow all origins temporarily for debugging
+    # BACKEND_CORS_ORIGINS: list[str] = ["*"]
+
+    # CORS - Allow specific origins
+    BACKEND_CORS_ORIGINS: list[str] = [
+        "http://localhost:3000",  # Local dev
+        "http://localhost:8000",  # Local backend
+        "https://academic-scheduler.andrewvu270.workers.dev",  # Production frontend
+    ]
     
     class Config:
         # Pydantic will read from environment variables
