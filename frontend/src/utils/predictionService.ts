@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../config/api';
 import { Task } from '../types/task';
 
 interface PredictionResponse {
@@ -8,7 +9,7 @@ interface PredictionResponse {
 
 export const getTaskPrediction = async (task: Task): Promise<{predicted_hours: number, priority_score: number}> => {
   try {
-    const response = await fetch('http://localhost:8000/api/ml/predict-workload', {
+    const response = await fetch(`${API_BASE_URL}/api/ml/predict-workload`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

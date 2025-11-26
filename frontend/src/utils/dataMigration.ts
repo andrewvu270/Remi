@@ -3,6 +3,8 @@
  * Handles migration of guest data from localStorage to Supabase when user logs in
  */
 
+import { API_BASE_URL } from "../config/api";
+
 interface LocalCourse {
   id: string;
   name: string;
@@ -54,7 +56,7 @@ export const migrateLocalDataToSupabase = async (accessToken: string, userId: st
         if (course.user_id !== 'guest') continue;
 
         // Save course to Supabase (backend will assign the authenticated user ID)
-        const courseResponse = await fetch('http://localhost:8000/api/courses/', {
+        const courseResponse = await fetch(`${API_BASE_URL}/api/courses/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -94,7 +96,7 @@ export const migrateLocalDataToSupabase = async (accessToken: string, userId: st
                 };
 
                 // Save task to Supabase
-                const taskResponse = await fetch('http://localhost:8000/api/tasks/', {
+                const taskResponse = await fetch(`${API_BASE_URL}/api/tasks/`, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',

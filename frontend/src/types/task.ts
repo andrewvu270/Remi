@@ -3,6 +3,7 @@ export interface Task {
   title: string;
   task_type: string;
   due_date: string;
+  description?: string; 
   weight_score?: number;  // Made optional to match backend
   predicted_hours: number;
   priority_score: number;

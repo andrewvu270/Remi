@@ -1,4 +1,5 @@
 import { Task, TaskStatus } from '../types/task';
+import { API_BASE_URL } from '../config/api';
 
 /**
  * Task Storage Utilities
@@ -45,7 +46,7 @@ export const fetchAllTasks = async (): Promise<TasksResponse> => {
   
   if (accessToken) {
     // Logged-in user: fetch from API
-    const response = await fetch('http://localhost:8000/api/tasks/?skip=0&limit=1000', {
+    const response = await fetch(`${API_BASE_URL}/api/tasks/?skip=0&limit=1000`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'accept': 'application/json'
@@ -125,7 +126,7 @@ export const addTask = async (taskData: Partial<Task>): Promise<Task> => {
   
   if (accessToken) {
     // Logged-in user: save to API
-    const response = await fetch('http://localhost:8000/api/tasks/', {
+    const response = await fetch(`${API_BASE_URL}/api/tasks/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -191,7 +192,7 @@ export const updateTaskStatus = async (taskId: string, status: string): Promise<
   
   if (accessToken) {
     // Logged-in user: update via API
-    const response = await fetch(`http://localhost:8000/api/tasks/${taskId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -226,7 +227,7 @@ export const deleteTask = async (taskId: string): Promise<void> => {
   
   if (accessToken) {
     // Logged-in user: delete via API
-    const response = await fetch(`http://localhost:8000/api/tasks/${taskId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${accessToken}`
