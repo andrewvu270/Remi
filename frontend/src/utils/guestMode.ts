@@ -3,6 +3,8 @@
  * Handles guest session management and data persistence
  */
 
+import { API_BASE_URL } from "../config/api";
+
 export const getOrCreateGuestSession = (): string => {
   let sessionId = localStorage.getItem('guest_session_id');
   
@@ -20,7 +22,7 @@ export const getOrCreateGuestSession = (): string => {
 
 export const createGuestSessionInBackend = async (sessionId: string) => {
   try {
-    await fetch('http://localhost:8000/api/guest/session', {
+    await fetch(`${API_BASE_URL}/api/guest/session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: sessionId }),
@@ -84,7 +86,7 @@ export const migrateGuestData = async (userId: string) => {
   
   try {
     const response = await fetch(
-      `http://localhost:8000/api/guest/migrate/${guestSessionId}`,
+      `${API_BASE_URL}/api/guest/migrate/${guestSessionId}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
