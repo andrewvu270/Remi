@@ -17,6 +17,9 @@ import {
   AccessTime as DueSoonIcon,
 } from '@mui/icons-material';
 import { API_BASE_URL } from '../config/api';
+import { agentService, FullPipelineRequest } from '../utils/agentService';
+import NaturalLanguageQuery from '../components/NaturalLanguageQuery';
+import StressVisualization from '../components/StressVisualization';
 
 interface StoredTask {
   id: string;
@@ -133,30 +136,35 @@ const Dashboard: React.FC = () => {
           return;
         }
 
-        // Step 1: Preview the file to extract course name
-        const previewFormData = new FormData();
-        previewFormData.append('file', file);
-        previewFormData.append('course_name', file.name.replace('.pdf', ''));
+        // Extract text from PDF using the existing upload endpoint first
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('course_name', file.name.replace('.pdf', ''));
 
-        const previewResponse = await fetch(`${API_BASE_URL}/api/upload/preview`, {
+        const uploadResponse = await fetch(`${API_BASE_URL}/api/upload/syllabus`, {
           method: 'POST',
-          body: previewFormData,
+          headers: {
+            'Authorization': localStorage.getItem('access_token') ? 
+              `Bearer ${localStorage.getItem('access_token')}` : '',
+          },
+          body: formData,
         });
 
-        if (!previewResponse.ok) {
-          throw new Error('Failed to preview file');
+        if (!uploadResponse.ok) {
+          const error = await uploadResponse.json();
+          throw new Error(error.detail || 'Failed to extract text from PDF');
         }
 
-        await previewResponse.json();
-
-        // Extract course name from file name or use default
-        const courseName = file.name.replace('.pdf', '').replace(/_/g, ' ');
-
-        // Step 2: Create course with extracted name
-        let courseId: string | null = localStorage.getItem(`course_${courseName}`);
-        if (!courseId) {
+        const uploadData = await uploadResponse.json();
+        
+        // Use the agent pipeline to process the extracted text
+        if (uploadData.extracted_text || uploadData.raw_text) {
+          const courseName = file.name.replace('.pdf', '').replace(/_/g, ' ');
+          const userId = localStorage.getItem('access_token') ? 'registered' : 'guest';
+          
+          // Create course first
+          let courseId: string | null = null;
           try {
-            // Include authorization header if user is logged in
             const courseHeaders: HeadersInit = { 'Content-Type': 'application/json' };
             const accessToken = localStorage.getItem('access_token');
             if (accessToken) {
@@ -172,75 +180,74 @@ const Dashboard: React.FC = () => {
                 description: `Course from ${file.name}`,
               }),
             });
+            
             if (courseResponse.ok) {
               const courseData = await courseResponse.json();
               courseId = courseData.id;
-              if (courseId) {
-                localStorage.setItem(`course_${courseName}`, courseId);
-              }
-            } else {
-              throw new Error('Failed to create course');
             }
           } catch (err) {
             console.error('Error creating course:', err);
-            throw new Error('Failed to create course for upload');
           }
-        }
 
-        // Step 3: Upload syllabus with course_id to extract and save tasks
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', file);
-        if (courseId) {
-          uploadFormData.append('course_id', courseId);
-        }
-
-        // Include authorization header if user is logged in
-        const headers: HeadersInit = {};
-        const accessToken = localStorage.getItem('access_token');
-        if (accessToken) {
-          headers['Authorization'] = `Bearer ${accessToken}`;
-        }
-
-        const uploadResponse = await fetch(`${API_BASE_URL}/api/upload/syllabus`, {
-          method: 'POST',
-          headers,
-          body: uploadFormData,
-        });
-
-        if (!uploadResponse.ok) {
-          const error = await uploadResponse.json();
-          throw new Error(error.detail || 'Upload failed');
-        }
-
-        const uploadData = await uploadResponse.json();
-
-        // Store course and tasks in localStorage for guest mode
-        if (courseId && uploadData.tasks) {
-          // Store course
-          const courseData = {
-            id: courseId,
-            name: courseName,
-            code: courseName.substring(0, 10).toUpperCase(),
-            description: `Course from ${file.name}`,
-            user_id: 'guest',
-            created_at: new Date().toISOString(),
+          // Run the full agent pipeline
+          const pipelineRequest: FullPipelineRequest = {
+            text: uploadData.extracted_text || uploadData.raw_text,
+            source_type: 'pdf',
+            schedule_days: 7,
+            user_id: userId,
+            course_id: courseId || undefined,
           };
-          localStorage.setItem(`course_${courseId}`, JSON.stringify(courseData));
 
-          // Store tasks
-          uploadData.tasks.forEach((task: any) => {
-            localStorage.setItem(`task_${task.id}`, JSON.stringify(task));
-          });
+          const pipelineResult = await agentService.fullPipeline(pipelineRequest);
+          
+          // Store the enhanced results
+          if (pipelineResult.tasks && courseId) {
+            // Store course data for guest mode
+            if (userId === 'guest') {
+              const courseData = {
+                id: courseId,
+                name: courseName,
+                code: courseName.substring(0, 10).toUpperCase(),
+                description: `Course from ${file.name}`,
+                user_id: 'guest',
+                created_at: new Date().toISOString(),
+              };
+              localStorage.setItem(`course_${courseId}`, JSON.stringify(courseData));
+            }
 
-          // Store course tasks list
-          const courseTaskIds = uploadData.tasks.map((t: any) => t.id);
-          localStorage.setItem(`course_${courseId}_tasks`, JSON.stringify(courseTaskIds));
+            // Store enhanced tasks with workload predictions and priorities
+            pipelineResult.tasks.forEach((task: any) => {
+              const enhancedTask = {
+                ...task,
+                user_id: userId,
+                course_id: courseId,
+                // Add agent-generated insights
+                predicted_hours: task.predicted_hours,
+                stress_level: task.stress_level,
+                priority_score: task.priority_score,
+                ai_insights: task.ai_insights,
+              };
+              
+              if (userId === 'guest') {
+                localStorage.setItem(`task_${task.id}`, JSON.stringify(enhancedTask));
+              }
+            });
+
+            // Store course tasks list for guest mode
+            if (userId === 'guest') {
+              const courseTaskIds = pipelineResult.tasks.map((t: any) => t.id);
+              localStorage.setItem(`course_${courseId}_tasks`, JSON.stringify(courseTaskIds));
+            }
+          }
         }
 
         setUploadedFiles((prev) => [...prev, file.name]);
       }
 
-      setUploadMessage({ type: 'success', text: 'Files uploaded successfully and tasks extracted!' });
+      setUploadMessage({ 
+        type: 'success', 
+        text: 'Files processed successfully! Tasks extracted with AI-powered workload predictions and prioritization.' 
+      });
       await refreshStats();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to upload files';
@@ -305,6 +312,12 @@ const Dashboard: React.FC = () => {
           );
         })}
       </Box>
+
+      {/* AI Assistant */}
+      <NaturalLanguageQuery />
+
+      {/* Stress Visualization */}
+      <StressVisualization />
 
       {/* Upload Section */}
       <Paper

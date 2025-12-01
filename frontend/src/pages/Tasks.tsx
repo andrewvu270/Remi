@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config/api';
+import { agentService } from '../utils/agentService';
 import {
   Container,
   Paper,
@@ -12,25 +13,23 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  CircularProgress,
-  Alert,
   Chip,
   Dialog,
   TextField,
   MenuItem,
-  Card,
-  CardContent,
-  Grid,
+  CircularProgress,
   useMediaQuery,
   useTheme,
+  Grid,
+  Alert,
 } from '@mui/material';
 import {
   Add as AddIcon,
   CheckCircle as CheckCircleIcon,
   Schedule as ScheduleIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { fetchAllTasks } from '../utils/taskStorage';
-import { enhanceTasksWithPredictions } from '../utils/predictionService';
 import { Task } from '../types/task';
 import StudyPlanGenerator from '../components/StudyPlanGenerator';
 
@@ -46,8 +45,9 @@ const Tasks: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [openStudyPlan, setOpenStudyPlan] = useState(false);
-  const [sortBy, setSortBy] = useState<'deadline' | 'priority'>('deadline');
+  const [sortBy, setSortBy] = useState<'deadline' | 'priority'>('priority');
   const [filterBy, setFilterBy] = useState<'all' | 'pending' | 'completed'>('all');
+  const [isPrioritizing, setIsPrioritizing] = useState(false);
   const [newTask, setNewTask] = useState({
     title: '',
     task_type: 'Assignment',
@@ -65,12 +65,67 @@ const Tasks: React.FC = () => {
       setLoading(true);
       const data = await fetchAllTasks();
 
-      // Enhance tasks with predictions
+      // Enhance tasks with agent predictions
       try {
-        const enhancedTasks = await enhanceTasksWithPredictions(data.tasks);
-        setTasks(enhancedTasks);
+        const userId = localStorage.getItem('access_token') ? 'registered' : 'guest';
+        
+        // Get workload predictions for all tasks
+        const tasksWithPredictions = await Promise.all(
+          data.tasks.map(async (task: Task) => {
+            try {
+              const prediction = await agentService.predictWorkload({
+                task,
+                use_hybrid: true,
+                user_id: userId,
+              });
+              
+              return {
+                ...task,
+                predicted_hours: prediction.predicted_hours,
+                stress_level: prediction.stress_level,
+                priority_score: prediction.priority_score,
+                ai_insights: prediction.ai_insights,
+              };
+            } catch (err) {
+              console.error('Error predicting workload for task:', task.id, err);
+              return task;
+            }
+          })
+        );
+
+        // Get AI prioritization for pending tasks
+        const pendingTasks = tasksWithPredictions.filter(task => task.status === 'pending');
+        if (pendingTasks.length > 0) {
+          try {
+            const prioritization = await agentService.prioritizeTasks({
+              tasks: pendingTasks,
+              user_id: userId,
+            });
+            
+            // Update tasks with AI priority scores
+            const prioritizedTasks = tasksWithPredictions.map(task => {
+              const priorityInfo = prioritization.prioritized_tasks?.find((p: any) => p.task_id === task.id);
+              if (priorityInfo) {
+                return {
+                  ...task,
+                  priority_score: priorityInfo.priority_score,
+                  ai_insights: priorityInfo.ai_insights,
+                  reasoning: priorityInfo.reasoning,
+                };
+              }
+              return task;
+            });
+            
+            setTasks(prioritizedTasks);
+          } catch (priorityErr) {
+            console.error('Error getting AI prioritization:', priorityErr);
+            setTasks(tasksWithPredictions);
+          }
+        } else {
+          setTasks(tasksWithPredictions);
+        }
       } catch (predictionError) {
-        console.error('Error getting predictions:', predictionError);
+        console.error('Error getting agent predictions:', predictionError);
         // Fall back to original tasks if prediction fails
         setTasks(data.tasks);
       }
@@ -78,6 +133,40 @@ const Tasks: React.FC = () => {
       setError(err instanceof Error ? err.message : 'Failed to load tasks');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRePrioritize = async () => {
+    const pendingTasks = tasks.filter(task => task.status === 'pending');
+    if (pendingTasks.length === 0) return;
+
+    setIsPrioritizing(true);
+    try {
+      const userId = localStorage.getItem('access_token') ? 'registered' : 'guest';
+      const prioritization = await agentService.prioritizeTasks({
+        tasks: pendingTasks,
+        user_id: userId,
+      });
+      
+      // Update tasks with new AI priority scores
+      const updatedTasks = tasks.map(task => {
+        const priorityInfo = prioritization.prioritized_tasks?.find((p: any) => p.task_id === task.id);
+        if (priorityInfo) {
+          return {
+            ...task,
+            priority_score: priorityInfo.priority_score,
+            ai_insights: priorityInfo.ai_insights,
+            reasoning: priorityInfo.reasoning,
+          };
+        }
+        return task;
+      });
+      
+      setTasks(updatedTasks);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to re-prioritize tasks');
+    } finally {
+      setIsPrioritizing(false);
     }
   };
 
@@ -224,6 +313,17 @@ const Tasks: React.FC = () => {
           gap: 2,
           width: { xs: '100%', sm: 'auto' }
         }}>
+          <Button
+            variant="outlined"
+            color="inherit"
+            startIcon={isPrioritizing ? <CircularProgress size={16} /> : <RefreshIcon />}
+            onClick={handleRePrioritize}
+            disabled={isPrioritizing || tasks.filter(t => t.status === 'pending').length === 0}
+            fullWidth={isMobile}
+            size="large"
+          >
+            {isPrioritizing ? 'Re-prioritizing...' : 'Re-prioritize'}
+          </Button>
           <Button
             variant="contained"
             color="primary"
@@ -414,6 +514,7 @@ const Tasks: React.FC = () => {
                   <TableCell sx={{ fontWeight: 600 }}>Due Date</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Time Left</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Est. Hours</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Stress Level</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Grade %</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
                 </TableRow>
@@ -462,6 +563,25 @@ const Tasks: React.FC = () => {
                             : 'success.main'
                     }}>
                       {task.predicted_hours?.toFixed(1)}h
+                    </TableCell>
+                    <TableCell sx={{ 
+                      fontWeight: 600,
+                      color: task.status === 'completed' ? 'text.secondary' :
+                            task.stress_level === 'high' ? 'error.main' :
+                            task.stress_level === 'medium' ? 'warning.main' :
+                            task.stress_level === 'low' ? 'success.main' : 'text.secondary'
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          bgcolor: task.stress_level === 'high' ? 'error.main' :
+                                  task.stress_level === 'medium' ? 'warning.main' :
+                                  task.stress_level === 'low' ? 'success.main' : 'grey.500'
+                        }} />
+                        {task.stress_level || 'Unknown'}
+                      </Box>
                     </TableCell>
                     <TableCell sx={{ fontWeight: 600, color: task.status === 'completed' ? 'text.secondary' : task.grade_percentage >= 20 ? 'error.main' : 'text.primary' }}>
                       {task.grade_percentage}%

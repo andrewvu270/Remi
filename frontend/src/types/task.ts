@@ -16,6 +16,9 @@ export interface Task {
   created_at?: string;
   updated_at?: string;
   user_id?: string;
+  stress_level?: 'low' | 'medium' | 'high';
+  ai_insights?: any;
+  reasoning?: string;
 }
 
 // Helper type for task status

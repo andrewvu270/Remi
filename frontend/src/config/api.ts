@@ -40,6 +40,16 @@ export const API_ENDPOINTS = {
   // ML
   ML_PREDICT: '/api/ml/predict-workload',
   
+  // Agent v2 endpoints
+  AGENTS_BASE: '/api/v2/agents',
+  AGENT_PARSE: '/api/v2/agents/parse',
+  AGENT_PREDICT: '/api/v2/agents/predict',
+  AGENT_PRIORITIZE: '/api/v2/agents/prioritize',
+  AGENT_SCHEDULE: '/api/v2/agents/schedule',
+  AGENT_QUERY: '/api/v2/agents/query',
+  AGENT_PIPELINE: '/api/v2/agents/pipeline',
+  AGENT_STATUS: '/api/v2/agents/status',
+  
   // Guest
   GUEST_SESSION: '/api/guest/session',
   GUEST_MIGRATE: (id: string) => `/api/guest/migrate/${id}`,

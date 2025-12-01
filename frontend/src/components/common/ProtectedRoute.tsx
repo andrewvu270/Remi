@@ -6,7 +6,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const isAuthenticated = !!localStorage.getItem('access_token');
   const location = useLocation();
 
   return isAuthenticated ? (

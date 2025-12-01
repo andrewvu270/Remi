@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Box, Typography, Button, Container, Paper, LinearProgress } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle as CheckCircleIcon, RadioButtonUnchecked as UncheckedIcon, CloudUpload as CloudUploadIcon } from '@mui/icons-material';
