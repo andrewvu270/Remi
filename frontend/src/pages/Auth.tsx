@@ -101,7 +101,7 @@ const Auth: React.FC = () => {
       }
 
       setSuccess('Login successful! Redirecting...');
-      setTimeout(() => navigate('/'), 1500);
+      setTimeout(() => navigate('/dashboard'), 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -147,7 +147,7 @@ const Auth: React.FC = () => {
       localStorage.setItem('access_token', data.access_token);
       localStorage.setItem('user_email', data.email);
       localStorage.setItem('user_id', data.user_id);
-      
+
       // Migrate local guest data to Supabase
       try {
         const { migrateLocalDataToSupabase, hasLocalGuestData } = await import('../utils/dataMigration');
@@ -161,7 +161,7 @@ const Auth: React.FC = () => {
       }
 
       setSuccess('Registration successful! Redirecting...');
-      setTimeout(() => navigate('/'), 1500);
+      setTimeout(() => navigate('/dashboard'), 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
@@ -243,9 +243,9 @@ const Auth: React.FC = () => {
             >
               {loading ? <CircularProgress size={24} /> : 'Login'}
             </Button>
-            
+
             <Divider sx={{ my: 2 }}>OR</Divider>
-            
+
             <Button
               fullWidth
               variant="outlined"

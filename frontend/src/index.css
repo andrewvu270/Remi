@@ -1,0 +1,99 @@
+/* Global Styles & Variables */
+:root {
+  /* Colors - Light & Clean */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f7f7f8; /* Soft gray for bento cards */
+  --text-primary: #1a1a1a;
+  --text-secondary: #666666;
+  --accent-primary: #000000; /* Stark black for contrast */
+  --accent-secondary: #333333;
+  --border-color: #e5e5e5;
+
+  /* Bento Grid Layout */
+  --bento-gap: 24px;
+  --bento-radius: 24px;
+  --card-padding: 32px;
+
+  /* Fonts */
+  --font-sans: 'Universal Sans Display', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'ABC Diatype Semi-Mono', 'Skiff Mono', 'JetBrains Mono', 'Roboto Mono', monospace;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5em;
+}
+
+p {
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+/* Bento Grid Utilities */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--bento-gap);
+  padding: var(--bento-gap);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.bento-card {
+  background: var(--bg-secondary);
+  border-radius: var(--bento-radius);
+  padding: var(--card-padding);
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease;
+  border: 1px solid transparent;
+}
+
+.bento-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.05);
+  border-color: var(--border-color);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #bbb;
+}

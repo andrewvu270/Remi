@@ -41,11 +41,11 @@ const Navigation: React.FC = () => {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  
+
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(!!localStorage.getItem('access_token'));
   const userEmail = isLoggedIn ? localStorage.getItem('user_email') : null;
   const isGuest = !isLoggedIn;
-  
+
   // Mobile drawer state
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
@@ -86,10 +86,10 @@ const Navigation: React.FC = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('user_email');
     localStorage.removeItem('user_id');
-    
+
     setIsLoggedIn(false);
     handleMenuClose();
-    
+
     // Clear all guest data to start fresh (this will reload the page)
     import('../utils/guestMode').then(({ clearAllGuestData }) => {
       clearAllGuestData();
@@ -124,7 +124,7 @@ const Navigation: React.FC = () => {
   };
 
   const navigationItems = [
-    { text: 'Dashboard', icon: <HomeIcon />, path: '/' },
+    { text: 'Dashboard', icon: <HomeIcon />, path: '/dashboard' },
     { text: 'Tasks', icon: <TasksIcon />, path: '/tasks' },
     { text: 'Calendar', icon: <CalendarIcon />, path: '/schedule' },
     { text: 'Survey', icon: <SurveyIcon />, path: '/survey' },
@@ -132,42 +132,54 @@ const Navigation: React.FC = () => {
 
   return (
     <>
-      <AppBar position="sticky" sx={{ backgroundColor: '#667eea' }}>
+      <AppBar position="sticky" sx={{ backgroundColor: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(20px)', borderBottom: '1px solid #eee', boxShadow: 'none' }}>
         <Toolbar>
           {/* Mobile Menu Button */}
           {isMobile && (
             <IconButton
-              color="inherit"
               edge="start"
               onClick={handleMobileDrawerToggle}
-              sx={{ mr: 2 }}
+              sx={{ mr: 2, color: 'text.primary' }}
             >
               <MenuIcon />
             </IconButton>
           )}
-          
-          <Typography 
-            variant="h6" 
-            sx={{ 
-              flexGrow: 1, 
-              fontWeight: 'bold',
-              fontSize: { xs: '1rem', sm: '1.25rem' }
+
+          <Typography
+            variant="h6"
+            component={RouterLink}
+            to="/"
+            sx={{
+              flexGrow: 1,
+              fontWeight: 600,
+              color: 'text.primary',
+              fontSize: { xs: '1rem', sm: '1.25rem' },
+              textDecoration: 'none',
+              '&:hover': { opacity: 0.7 },
+              cursor: 'pointer'
             }}
           >
-            📚 Academic Scheduler
+            Academic Scheduler
           </Typography>
 
           {/* Desktop Navigation */}
           {!isMobile && (
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
               {navigationItems.map((item) => (
                 <Button
                   key={item.path}
-                  color="inherit"
                   startIcon={item.icon}
                   component={RouterLink}
                   to={item.path}
-                  sx={{ textTransform: 'none', fontSize: '1rem' }}
+                  sx={{
+                    textTransform: 'none',
+                    fontSize: '0.9rem',
+                    color: location.pathname === item.path ? 'text.primary' : 'text.secondary',
+                    bgcolor: location.pathname === item.path ? 'rgba(0,0,0,0.05)' : 'transparent',
+                    '&:hover': { bgcolor: 'rgba(0,0,0,0.05)', color: 'text.primary' },
+                    borderRadius: '12px',
+                    px: 2
+                  }}
                 >
                   {item.text}
                 </Button>
@@ -175,15 +187,13 @@ const Navigation: React.FC = () => {
 
               {isGuest && (
                 <Button
-                  color="inherit"
                   variant="outlined"
                   startIcon={<CloudUploadIcon />}
                   onClick={handleSaveToCloud}
                   sx={{
                     textTransform: 'none',
                     fontSize: '0.9rem',
-                    borderColor: 'rgba(255,255,255,0.5)',
-                    '&:hover': { borderColor: 'white' },
+                    ml: 2
                   }}
                 >
                   Save to Cloud
@@ -200,15 +210,17 @@ const Navigation: React.FC = () => {
                 sx={{
                   width: 40,
                   height: 40,
-                  bgcolor: 'rgba(255,255,255,0.2)',
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+                  ml: 1,
+                  bgcolor: 'rgba(0,0,0,0.05)',
+                  '&:hover': { bgcolor: 'rgba(0,0,0,0.1)' },
                 }}
               >
                 <Avatar
                   sx={{
                     width: 32,
                     height: 32,
-                    bgcolor: '#764ba2',
+                    bgcolor: '#000',
+                    color: '#fff',
                     fontSize: '0.9rem',
                   }}
                 >
@@ -219,12 +231,19 @@ const Navigation: React.FC = () => {
                 anchorEl={anchorEl}
                 open={Boolean(anchorEl)}
                 onClose={handleMenuClose}
+                PaperProps={{
+                  sx: {
+                    mt: 1.5,
+                    borderRadius: '16px',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                  }
+                }}
               >
                 <MenuItem disabled>
                   <Typography variant="body2">{userEmail}</Typography>
                 </MenuItem>
                 <MenuItem onClick={handleLogout}>
-                  <LogoutIcon sx={{ mr: 1 }} />
+                  <LogoutIcon sx={{ mr: 1, fontSize: 20 }} />
                   Logout
                 </MenuItem>
               </Menu>
@@ -241,14 +260,15 @@ const Navigation: React.FC = () => {
         sx={{
           display: { xs: 'block', md: 'none' },
           '& .MuiDrawer-paper': {
-            width: 250,
+            width: 280,
             boxSizing: 'border-box',
+            borderRight: 'none',
           },
         }}
       >
-        <Box sx={{ p: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-            📚 Menu
+        <Box sx={{ p: 3 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+            Menu
           </Typography>
           <List>
             {navigationItems.map((item) => (
@@ -273,7 +293,7 @@ const Navigation: React.FC = () => {
                 <ListItemText primary={item.text} />
               </ListItem>
             ))}
-            
+
             {isGuest && (
               <>
                 <Divider sx={{ my: 2 }} />

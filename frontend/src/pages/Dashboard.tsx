@@ -6,18 +6,15 @@ import {
   Box,
   Typography,
   Button,
-  Card,
-  CardContent,
-  CardActions,
   LinearProgress,
   Alert,
   CircularProgress,
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
-  CheckCircle as CheckCircleIcon,
-  Warning as WarningIcon,
-  Error as ErrorIcon,
+  TaskAlt as CompletedIcon,
+  HourglassEmpty as PendingIcon,
+  AccessTime as DueSoonIcon,
 } from '@mui/icons-material';
 import { API_BASE_URL } from '../config/api';
 
@@ -83,7 +80,7 @@ const fetchSupabaseTasks = async (): Promise<StoredTask[] | null> => {
     // Use the same fetchAllTasks function as the Tasks page for consistency
     const { fetchAllTasks } = await import('../utils/taskStorage');
     const data = await fetchAllTasks();
-    
+
     return (data.tasks || []).map((task: any) => ({
       id: task.id,
       title: task.title,
@@ -151,10 +148,10 @@ const Dashboard: React.FC = () => {
         }
 
         await previewResponse.json();
-        
+
         // Extract course name from file name or use default
         const courseName = file.name.replace('.pdf', '').replace(/_/g, ' ');
-        
+
         // Step 2: Create course with extracted name
         let courseId: string | null = localStorage.getItem(`course_${courseName}`);
         if (!courseId) {
@@ -165,7 +162,7 @@ const Dashboard: React.FC = () => {
             if (accessToken) {
               courseHeaders['Authorization'] = `Bearer ${accessToken}`;
             }
-            
+
             const courseResponse = await fetch(`${API_BASE_URL}/api/courses/`, {
               method: 'POST',
               headers: courseHeaders,
@@ -216,7 +213,7 @@ const Dashboard: React.FC = () => {
         }
 
         const uploadData = await uploadResponse.json();
-        
+
         // Store course and tasks in localStorage for guest mode
         if (courseId && uploadData.tasks) {
           // Store course
@@ -229,17 +226,17 @@ const Dashboard: React.FC = () => {
             created_at: new Date().toISOString(),
           };
           localStorage.setItem(`course_${courseId}`, JSON.stringify(courseData));
-          
+
           // Store tasks
           uploadData.tasks.forEach((task: any) => {
             localStorage.setItem(`task_${task.id}`, JSON.stringify(task));
           });
-          
+
           // Store course tasks list
           const courseTaskIds = uploadData.tasks.map((t: any) => t.id);
           localStorage.setItem(`course_${courseId}_tasks`, JSON.stringify(courseTaskIds));
         }
-        
+
         setUploadedFiles((prev) => [...prev, file.name]);
       }
 
@@ -254,53 +251,91 @@ const Dashboard: React.FC = () => {
   };
 
   const stats = [
-    { label: 'Completed', value: statsSnapshot.completed, icon: CheckCircleIcon, color: '#388e3c' },
-    { label: 'Pending', value: statsSnapshot.pending, icon: WarningIcon, color: '#f57c00' },
-    { label: 'Due Soon', value: statsSnapshot.dueSoon, icon: ErrorIcon, color: '#d32f2f' },
+    { label: 'Completed', value: statsSnapshot.completed, icon: CompletedIcon, color: '#388e3c' },
+    { label: 'Pending', value: statsSnapshot.pending, icon: PendingIcon, color: '#f57c00' },
+    { label: 'Due Soon', value: statsSnapshot.dueSoon, icon: DueSoonIcon, color: '#d32f2f' },
   ];
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h3" component="h1" sx={{ fontWeight: 'bold', mb: 1 }}>
-          Welcome to Academic Scheduler
+      <Box sx={{ mb: 6 }} className="animate-fade-in">
+        <Typography variant="h2" component="h1" sx={{ mb: 1 }}>
+          Welcome Back
         </Typography>
-        <Typography variant="body1" color="textSecondary">
-          Manage your courses, track deadlines, and optimize your study schedule
+        <Typography variant="body1" color="textSecondary" sx={{ fontSize: '1.1rem' }}>
+          Here's what's happening with your academic schedule.
         </Typography>
+      </Box>
+
+      {/* Stats Grid */}
+      <Box className="bento-grid animate-fade-in delay-100" sx={{ mb: 6, padding: 0 }}>
+        {stats.map((stat, index) => {
+          const Icon = stat.icon;
+          return (
+            <Paper
+              key={index}
+              className="bento-card"
+              sx={{
+                gridColumn: { xs: 'span 12', sm: 'span 4' },
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                minHeight: '160px'
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Box sx={{
+                  p: 1,
+                  borderRadius: '12px',
+                  bgcolor: `${stat.color}15`,
+                  color: stat.color,
+                  mr: 2
+                }}>
+                  <Icon sx={{ fontSize: 24 }} />
+                </Box>
+                <Typography color="textSecondary" variant="body2" fontWeight={500}>
+                  {stat.label}
+                </Typography>
+              </Box>
+              <Typography variant="h3" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                {stat.value}
+              </Typography>
+            </Paper>
+          );
+        })}
       </Box>
 
       {/* Upload Section */}
       <Paper
+        className="bento-card animate-fade-in delay-200"
         sx={{
-          p: 4,
-          mb: 4,
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          borderRadius: 2,
+          p: 6,
+          mb: 6,
           textAlign: 'center',
+          border: '2px dashed #e0e0e0',
+          bgcolor: 'transparent',
+          '&:hover': {
+            borderColor: 'primary.main',
+            bgcolor: 'rgba(0,0,0,0.02)'
+          }
         }}
       >
-        <CloudUploadIcon sx={{ fontSize: 48, mb: 2 }} />
-        <Typography variant="h5" sx={{ mb: 2, fontWeight: 'bold' }}>
-          Upload Your Syllabus
+        <CloudUploadIcon sx={{ fontSize: 48, mb: 2, color: 'text.secondary' }} />
+        <Typography variant="h4" sx={{ mb: 2 }}>
+          Upload Syllabus
         </Typography>
-        <Typography variant="body2" sx={{ mb: 3, opacity: 0.9 }}>
-          Upload PDF syllabi to automatically extract deadlines and course information
+        <Typography variant="body1" sx={{ mb: 4, maxWidth: '500px', mx: 'auto' }}>
+          Drop your PDF syllabus here to automatically extract deadlines and create your study plan.
         </Typography>
         <Button
           variant="contained"
           component="label"
-          sx={{
-            backgroundColor: 'white',
-            color: '#667eea',
-            fontWeight: 'bold',
-            '&:hover': { backgroundColor: '#f5f5f5' },
-          }}
+          size="large"
           disabled={uploading}
+          sx={{ minWidth: '200px' }}
         >
-          {uploading ? <CircularProgress size={24} /> : 'Choose PDF Files'}
+          {uploading ? <CircularProgress size={24} color="inherit" /> : 'Select PDF'}
           <input
             type="file"
             multiple
@@ -314,64 +349,51 @@ const Dashboard: React.FC = () => {
 
       {/* Upload Message */}
       {uploadMessage && (
-        <Alert severity={uploadMessage.type} sx={{ mb: 3 }}>
+        <Alert severity={uploadMessage.type} sx={{ mb: 4, borderRadius: '16px' }}>
           {uploadMessage.text}
         </Alert>
       )}
 
-      {/* Stats Grid */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {stats.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <Grid item xs={12} sm={6} md={4} key={index}>
-              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Icon sx={{ fontSize: 32, color: stat.color, mr: 1 }} />
-                    <Typography color="textSecondary" variant="body2">
-                      {stat.label}
-                    </Typography>
-                  </Box>
-                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: stat.color }}>
-                    {stat.value}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          );
-        })}
-      </Grid>
-
       {/* Uploaded Files */}
       {uploadedFiles.length > 0 && (
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
-            Uploaded Syllabi ({uploadedFiles.length})
+        <Box className="animate-fade-in delay-300">
+          <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
+            Recent Uploads
           </Typography>
-          <Grid container spacing={2}>
+          <Grid container spacing={3}>
             {uploadedFiles.map((file, index) => (
               <Grid item xs={12} sm={6} md={4} key={index}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                      {file}
-                    </Typography>
-                    <LinearProgress variant="determinate" value={100} sx={{ mb: 1 }} />
+                <Paper className="bento-card" sx={{ p: 3 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+                    {file}
+                  </Typography>
+                  <LinearProgress
+                    variant="determinate"
+                    value={100}
+                    sx={{
+                      mb: 2,
+                      height: 6,
+                      borderRadius: 3,
+                      bgcolor: '#f0f0f0',
+                      '& .MuiLinearProgress-bar': {
+                        borderRadius: 3,
+                        bgcolor: 'success.main'
+                      }
+                    }}
+                  />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="caption" color="textSecondary">
-                      Processing complete
+                      Processed
                     </Typography>
-                  </CardContent>
-                  <CardActions>
                     <Button size="small" color="primary">
-                      View Details
+                      View
                     </Button>
-                  </CardActions>
-                </Card>
+                  </Box>
+                </Paper>
               </Grid>
             ))}
           </Grid>
-        </Paper>
+        </Box>
       )}
 
     </Container>

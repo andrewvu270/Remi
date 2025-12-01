@@ -149,10 +149,10 @@ const Schedule: React.FC = () => {
             backgroundColor: isToday
               ? '#e3f2fd'
               : dayTasks.some(t => t.status === 'completed')
-              ? '#e8f5e9'
-              : dayTasks.length > 0
-              ? '#fff3e0'
-              : '#ffffff',
+                ? '#e8f5e9'
+                : dayTasks.length > 0
+                  ? '#fff3e0'
+                  : '#ffffff',
             cursor: dayTasks.length > 0 ? 'pointer' : 'default',
             transition: 'all 0.2s',
             '&:hover': {
@@ -208,42 +208,49 @@ const Schedule: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h3" component="h1" sx={{ fontWeight: 'bold', mb: 4 }}>
-        Academic Calendar
-      </Typography>
+      <Box sx={{ mb: 6 }} className="animate-fade-in">
+        <Typography variant="h2" component="h1" sx={{ mb: 1 }}>
+          Calendar
+        </Typography>
+        <Typography variant="body1" color="textSecondary">
+          View your upcoming deadlines and study sessions.
+        </Typography>
+      </Box>
 
-      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 3, borderRadius: '16px' }}>{error}</Alert>}
 
       {/* Month Navigation */}
-      <Paper sx={{ p: 2, mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Paper className="bento-card animate-fade-in delay-100" sx={{ p: 2, mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Button
           startIcon={<ChevronLeftIcon />}
           onClick={handlePrevMonth}
-          variant="outlined"
+          variant="text"
+          color="inherit"
         >
           Previous
         </Button>
-        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+        <Typography variant="h4" sx={{ fontWeight: 600 }}>
           {monthName}
         </Typography>
         <Button
           endIcon={<ChevronRightIcon />}
           onClick={handleNextMonth}
-          variant="outlined"
+          variant="text"
+          color="inherit"
         >
           Next
         </Button>
       </Paper>
 
       {/* Calendar Grid */}
-      <Paper sx={{ p: 2, mb: 3 }}>
+      <Paper className="bento-card animate-fade-in delay-200" sx={{ p: 3, mb: 4 }}>
         {/* Day headers */}
-        <Grid container spacing={1} sx={{ mb: 1 }}>
+        <Grid container spacing={1} sx={{ mb: 2 }}>
           {dayNames.map((day) => (
             <Grid item xs={12 / 7} key={day}>
               <Typography
                 variant="subtitle2"
-                sx={{ fontWeight: 'bold', textAlign: 'center', py: 1 }}
+                sx={{ fontWeight: 600, textAlign: 'center', color: 'text.secondary' }}
               >
                 {day}
               </Typography>
@@ -262,11 +269,11 @@ const Schedule: React.FC = () => {
       </Paper>
 
       {/* Legend */}
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
+      <Paper className="bento-card animate-fade-in delay-300" sx={{ p: 3 }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
           Task Types
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
           {[
             { type: 'Assignment', color: '#2196F3' },
             { type: 'Exam', color: '#F44336' },
@@ -278,13 +285,13 @@ const Schedule: React.FC = () => {
             <Box key={item.type} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Box
                 sx={{
-                  width: 16,
-                  height: 16,
+                  width: 12,
+                  height: 12,
                   backgroundColor: item.color,
-                  borderRadius: 1,
+                  borderRadius: '50%',
                 }}
               />
-              <Typography variant="body2">{item.type}</Typography>
+              <Typography variant="body2" color="textSecondary">{item.type}</Typography>
             </Box>
           ))}
         </Box>

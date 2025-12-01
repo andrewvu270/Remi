@@ -39,7 +39,7 @@ const GoogleCallback: React.FC = () => {
         }
 
         const data = await response.json();
-        
+
         // Save token to localStorage
         localStorage.setItem('access_token', data.access_token);
         localStorage.setItem('user_email', data.email);
@@ -58,7 +58,7 @@ const GoogleCallback: React.FC = () => {
         }
 
         // Redirect to dashboard
-        navigate('/');
+        navigate('/dashboard');
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Authentication failed');
         setLoading(false);
@@ -71,10 +71,10 @@ const GoogleCallback: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         height: '100vh',
         flexDirection: 'column',
         gap: '20px'
@@ -87,10 +87,10 @@ const GoogleCallback: React.FC = () => {
 
   if (error) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         height: '100vh',
         flexDirection: 'column',
         gap: '20px'
