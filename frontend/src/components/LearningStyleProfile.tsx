@@ -7,14 +7,12 @@ import {
   Box,
   Chip,
   LinearProgress,
-  Alert,
   RadioGroup,
   FormControlLabel,
   Radio,
   FormControl,
   FormLabel,
   Paper,
-  Grid,
 } from '@mui/material';
 import {
   Psychology as PsychologyIcon,
@@ -43,7 +41,6 @@ const LearningStyleProfile: React.FC = () => {
   const [showQuiz, setShowQuiz] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [quizAnswers, setQuizAnswers] = useState<number[]>([]);
-  const [loading, setLoading] = useState(false);
 
   const quizQuestions = [
     {
@@ -179,13 +176,15 @@ const LearningStyleProfile: React.FC = () => {
   };
 
   const getTechniquesForStyle = (style: string, context: string = "general"): string[] => {
-    const techniques = {
-      visual: [
-        "Create mind maps and flowcharts",
-        "Use color-coded notes",
-        "Watch video tutorials",
-        "Draw diagrams to explain concepts"
-      ],
+    const techniques: Record<string, Record<string, string[]>> = {
+      visual: {
+        general: [
+          "Create mind maps and flowcharts",
+          "Use color-coded notes",
+          "Watch video tutorials",
+          "Draw diagrams to explain concepts"
+        ]
+      },
       reading: {
         general: [
           "Take detailed structured notes",
@@ -248,7 +247,7 @@ const LearningStyleProfile: React.FC = () => {
       }
     };
     
-    return techniques[style as keyof typeof techniques]?.[context as keyof typeof techniques.visual] || techniques[style as keyof typeof techniques]?.general || [];
+    return techniques[style]?.[context] || techniques[style]?.general || [];
   };
 
   const handleQuizAnswer = (answerIndex: number) => {
@@ -270,8 +269,11 @@ const LearningStyleProfile: React.FC = () => {
       auditory: 0
     };
 
-    answers.forEach((answer, questionIndex) => {
-      style[answer as keyof LearningStyle] += 1;
+    answers.forEach((answer) => {
+      const styleKeys: (keyof LearningStyle)[] = ['visual', 'reading', 'hands_on', 'auditory'];
+      if (answer >= 0 && answer < styleKeys.length) {
+        style[styleKeys[answer]] += 1;
+      }
     });
 
     // Normalize to percentages

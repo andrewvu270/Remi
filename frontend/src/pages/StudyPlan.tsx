@@ -18,7 +18,6 @@ import {
   Chip,
   IconButton,
   useTheme,
-  useMediaQuery,
 } from '@mui/material';
 import {
   CalendarToday as CalendarIcon,

@@ -18,27 +18,16 @@ import {
   Psychology as PsychologyIcon,
 } from '@mui/icons-material';
 
-interface StudySession {
-  taskTitle: string;
-  duration: number; // in minutes
-  completed: number; // completed minutes
-  isActive: boolean;
-  learningStyle: string;
-  studyTips: string[];
-}
-
 interface PomodoroTimerProps {
   taskTitle: string;
   learningStyle: string;
   studyTips: string[];
-  onComplete?: () => void;
 }
 
 const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
   taskTitle,
   learningStyle,
-  studyTips,
-  onComplete
+  studyTips
 }) => {
   const theme = useTheme();
   const [timeLeft, setTimeLeft] = useState(25 * 60); // 25 minutes in seconds
