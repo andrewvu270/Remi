@@ -29,11 +29,30 @@ def generate_study_plan_prompt(tasks: List[Dict[str, Any]], study_hours: int, da
         for task in tasks
     ])
     
+    # Add research insights section if available
+    research_insights = []
+    for task in tasks:
+        task_research = []
+        if task.get('wiki_summary'):
+            task_research.append(f"Wikipedia: {task['wiki_summary']}")
+        if task.get('academic_sources'):
+            sources = task['academic_sources'][:2]  # Limit to top 2
+            task_research.extend([f"Academic: {src.get('title', 'N/A')}" for src in sources])
+        if task.get('research_insights', {}).get('recommendations'):
+            recs = task['research_insights']['recommendations'][:2]
+            task_research.extend([f"Tip: {rec}" for rec in recs])
+        
+        if task_research:
+            research_insights.append(f"{task['title']}:\n" + "\n".join(f"  • {insight}" for insight in task_research))
+    
+    research_section = "\n\nRESEARCH INSIGHTS:\n" + "\n".join(research_insights) if research_insights else ""
+    
     return f"""Create a detailed study plan based on the following tasks and their priorities.
     The user has {study_hours} hours available per day for {days} days.
     
     TASKS:
     {task_list}
+    {research_section}
     
     INSTRUCTIONS:
     1. Sort tasks by priority score (highest first) and due date (soonest first)
@@ -42,7 +61,8 @@ def generate_study_plan_prompt(tasks: List[Dict[str, Any]], study_hours: int, da
     4. Include short breaks between study sessions
     5. Provide time estimates for each session
     6. Format the response in markdown with clear sections for each day
-    7. Include a summary of total study hours and tasks covered
+    7. Incorporate research insights to provide more targeted study strategies
+    8. Include a summary of total study hours and tasks covered
     
     FORMAT:
     # Study Plan for [Start Date] to [End Date]
@@ -50,6 +70,7 @@ def generate_study_plan_prompt(tasks: List[Dict[str, Any]], study_hours: int, da
     ## Day 1: [Date]
     - [Time Block] [Task Name] (Priority: X/10) - [Duration]h
       - [Specific subtask or focus area]
+      - [Research-based study tip if available]
     
     ## Summary
     - Total study hours: X hours

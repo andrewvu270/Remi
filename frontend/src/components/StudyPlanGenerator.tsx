@@ -47,7 +47,12 @@ const StudyPlanGenerator: React.FC<StudyPlanGeneratorProps> = ({ tasks, open, on
             due_date: task.due_date,
             priority_score: task.priority_score,
             predicted_hours: task.predicted_hours,
-            grade_percentage: task.grade_percentage
+            grade_percentage: task.grade_percentage,
+            research_sources: task.research_sources,
+            wiki_summary: task.wiki_summary,
+            academic_sources: task.academic_sources,
+            community_answers: task.community_answers,
+            research_insights: task.research_insights
           })),
           study_hours_per_day: studyHours,
           days_to_plan: daysToPlan
