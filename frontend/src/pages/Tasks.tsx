@@ -28,10 +28,12 @@ import {
   CheckCircle as CheckCircleIcon,
   Schedule as ScheduleIcon,
   Refresh as RefreshIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import { fetchAllTasks } from '../utils/taskStorage';
 import { Task } from '../types/task';
 import StudyPlanGenerator from '../components/StudyPlanGenerator';
+import TaskResearchDialog from '../components/TaskResearchDialog';
 
 // Using the Task type from types/task.ts
 
@@ -48,6 +50,8 @@ const Tasks: React.FC = () => {
   const [sortBy, setSortBy] = useState<'deadline' | 'priority'>('priority');
   const [filterBy, setFilterBy] = useState<'all' | 'pending' | 'completed'>('all');
   const [isPrioritizing, setIsPrioritizing] = useState(false);
+  const [researchTask, setResearchTask] = useState<Task | null>(null);
+  const [openResearchDialog, setOpenResearchDialog] = useState(false);
   const [newTask, setNewTask] = useState({
     title: '',
     task_type: 'Assignment',
@@ -197,6 +201,16 @@ const Tasks: React.FC = () => {
         return scoreB - scoreA; // Higher score first
       }
     });
+  };
+
+  const handleOpenResearch = (task: Task) => {
+    setResearchTask(task);
+    setOpenResearchDialog(true);
+  };
+
+  const handleCloseResearch = () => {
+    setOpenResearchDialog(false);
+    setResearchTask(null);
   };
 
   if (loading) {
@@ -410,6 +424,17 @@ const Tasks: React.FC = () => {
                       variant="outlined"
                       size="small"
                     />
+                    {(task.research_sources || task.wiki_summary || task.academic_sources) && (
+                      <Chip
+                        label="Research"
+                        size="small"
+                        icon={<SearchIcon />}
+                        onClick={() => handleOpenResearch(task)}
+                        clickable
+                        color="primary"
+                        variant="outlined"
+                      />
+                    )}
                   </Box>
 
                   <Grid container spacing={2}>
@@ -457,6 +482,7 @@ const Tasks: React.FC = () => {
                   <TableCell sx={{ fontWeight: 600 }}>Stress Level</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Grade %</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Research</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -537,6 +563,22 @@ const Tasks: React.FC = () => {
                         icon={task.status === 'completed' ? <CheckCircleIcon /> : undefined}
                       />
                     </TableCell>
+                    <TableCell>
+                      {(task.research_sources || task.wiki_summary || task.academic_sources) ? (
+                        <Button
+                          size="small"
+                          startIcon={<SearchIcon />}
+                          onClick={() => handleOpenResearch(task)}
+                          variant="outlined"
+                        >
+                          Research
+                        </Button>
+                      ) : (
+                        <Typography variant="body2" color="textSecondary">
+                          No data
+                        </Typography>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -602,6 +644,12 @@ const Tasks: React.FC = () => {
         open={openStudyPlan}
         onClose={() => setOpenStudyPlan(false)}
         tasks={tasks}
+      />
+
+      <TaskResearchDialog
+        task={researchTask}
+        open={openResearchDialog}
+        onClose={handleCloseResearch}
       />
     </Container>
   );
