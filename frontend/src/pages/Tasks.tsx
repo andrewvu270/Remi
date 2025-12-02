@@ -32,7 +32,6 @@ import {
 } from '@mui/icons-material';
 import { fetchAllTasks } from '../utils/taskStorage';
 import { Task } from '../types/task';
-import StudyPlanGenerator from '../components/StudyPlanGenerator';
 import TaskResearchDialog from '../components/TaskResearchDialog';
 
 // Using the Task type from types/task.ts
@@ -46,7 +45,6 @@ const Tasks: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
-  const [openStudyPlan, setOpenStudyPlan] = useState(false);
   const [sortBy, setSortBy] = useState<'deadline' | 'priority'>('priority');
   const [filterBy, setFilterBy] = useState<'all' | 'pending' | 'completed'>('all');
   const [isPrioritizing, setIsPrioritizing] = useState(false);
@@ -287,16 +285,6 @@ const Tasks: React.FC = () => {
             size="large"
           >
             Add Task
-          </Button>
-          <Button
-            variant="outlined"
-            color="inherit"
-            onClick={() => setOpenStudyPlan(true)}
-            disabled={tasks.length === 0}
-            fullWidth={isMobile}
-            size="large"
-          >
-            Generate Plan
           </Button>
         </Box>
       </Box>
@@ -639,12 +627,6 @@ const Tasks: React.FC = () => {
           </Box>
         </Box>
       </Dialog>
-
-      <StudyPlanGenerator
-        open={openStudyPlan}
-        onClose={() => setOpenStudyPlan(false)}
-        tasks={tasks}
-      />
 
       <TaskResearchDialog
         task={researchTask}

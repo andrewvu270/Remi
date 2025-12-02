@@ -30,6 +30,7 @@ import {
   Home as HomeIcon,
   CheckCircle as TasksIcon,
   DateRange as CalendarIcon,
+  Schedule as StudyPlanIcon,
   Poll as SurveyIcon,
   Logout as LogoutIcon,
   CloudUpload as CloudUploadIcon,
@@ -127,6 +128,7 @@ const Navigation: React.FC = () => {
     { text: 'Dashboard', icon: <HomeIcon />, path: '/dashboard' },
     { text: 'Tasks', icon: <TasksIcon />, path: '/tasks' },
     { text: 'Calendar', icon: <CalendarIcon />, path: '/schedule' },
+    { text: 'Study Plan', icon: <StudyPlanIcon />, path: '/study-plan' },
     { text: 'Survey', icon: <SurveyIcon />, path: '/survey' },
   ];
 

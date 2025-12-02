@@ -5,6 +5,7 @@ import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
 import Tasks from './pages/Tasks';
 import Schedule from './pages/Schedule';
+import StudyPlan from './pages/StudyPlan';
 import Survey from './pages/Survey';
 import Auth from './pages/Auth';
 import GoogleCallback from './pages/GoogleCallback';
@@ -37,6 +38,7 @@ function App() {
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/tasks" element={<Tasks />} />
                   <Route path="/schedule" element={<Schedule />} />
+                  <Route path="/study-plan" element={<StudyPlan />} />
                   <Route path="/survey" element={<Survey />} />
                 </Routes>
               </>
