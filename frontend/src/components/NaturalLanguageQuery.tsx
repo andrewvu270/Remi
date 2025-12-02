@@ -16,6 +16,7 @@ import {
   SmartToy as BotIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import { agentService } from '../utils/agentService';
 
@@ -24,6 +25,12 @@ interface QueryResponse {
   actions_taken?: string[];
   related_tasks?: any[];
   suggestions?: string[];
+  research_sources?: Array<{
+    source: string;
+    title?: string;
+    url?: string;
+    summary?: string;
+  }>;
 }
 
 const NaturalLanguageQuery: React.FC = () => {
@@ -212,6 +219,42 @@ const NaturalLanguageQuery: React.FC = () => {
                       Due: {new Date(task.due_date).toLocaleDateString()} • 
                       {task.predicted_hours ? ` ${task.predicted_hours.toFixed(1)}h` : ''}
                     </Typography>
+                  </Box>
+                ))}
+              </Box>
+            )}
+
+            {/* Research Sources */}
+            {response.research_sources && response.research_sources.length > 0 && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <SearchIcon fontSize="small" />
+                  Research sources:
+                </Typography>
+                {response.research_sources.map((source, index) => (
+                  <Box key={index} sx={{ 
+                    p: 1, 
+                    bgcolor: 'white', 
+                    borderRadius: '8px',
+                    mb: 1,
+                    border: '1px solid',
+                    borderColor: 'grey.200'
+                  }}>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {source.title || source.source}
+                    </Typography>
+                    {source.summary && (
+                      <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block' }}>
+                        {source.summary}
+                      </Typography>
+                    )}
+                    {source.url && (
+                      <Typography variant="caption" color="primary.main" sx={{ mt: 0.5, display: 'block' }}>
+                        <a href={source.url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>
+                          View source →
+                        </a>
+                      </Typography>
+                    )}
                   </Box>
                 ))}
               </Box>
