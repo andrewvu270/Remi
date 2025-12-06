@@ -1,5 +1,5 @@
 """
-MCP (Master Control Program) Orchestrator
+Orchestrator Agent
 
 Coordinates all MyDesk agents, manages workflow, maintains context,
 and integrates agent outputs into cohesive responses.
@@ -33,23 +33,23 @@ class WorkflowType:
     FULL_PIPELINE_ENHANCED = "full_pipeline_enhanced"  # With MCP tools
 
 
-class MCPOrchestrator:
+class OrchestratorAgent:
     """
-    Master Control Program - orchestrates all agents and workflows.
-    
-    The MCP is responsible for:
+    Orchestrator Agent - coordinates all agents and workflows.
+
+    The Orchestrator is responsible for:
     - Receiving user input (documents, queries, tasks)
     - Routing to appropriate agents
     - Maintaining context and state
     - Integrating agent outputs
     - Managing the full workflow pipeline
     """
-    
+
     def __init__(self):
         self.logger = logger
         self.context: Dict[str, Any] = {}
         self.mcp_service = mcp_service
-        
+
         # Initialize agents (both original and enhanced)
         self.agents = {
             "task_parsing": task_parsing_agent,
@@ -59,79 +59,79 @@ class MCPOrchestrator:
             "schedule_optimization": schedule_optimization_agent,
             "natural_language": natural_language_agent
         }
-        
-        self.logger.info("MCP Orchestrator initialized with 6 agents (including enhanced task parsing)")
-    
+
+        self.logger.info("Orchestrator Agent initialized with 6 agents (including enhanced task parsing)")
+
     async def execute_workflow(
-        self, 
-        workflow_type: str, 
+        self,
+        workflow_type: str,
         input_data: Dict[str, Any],
         user_context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Execute a workflow by coordinating multiple agents.
-        
+
         Args:
             workflow_type: Type of workflow to execute
             input_data: Input data for the workflow
             user_context: Optional user context (user_id, preferences, etc.)
-            
+
         Returns:
             Dictionary with workflow results
         """
         self.logger.info(f"Executing workflow: {workflow_type}")
-        
+
         # Update context
         if user_context:
             self.context.update(user_context)
-        
+
         # Route to appropriate workflow
         if workflow_type == WorkflowType.PARSE_DOCUMENT:
             return await self._workflow_parse_document(input_data)
-        
+
         elif workflow_type == WorkflowType.PARSE_DOCUMENT_ENHANCED:
             return await self._workflow_parse_document_enhanced(input_data)
-        
+
         elif workflow_type == WorkflowType.PREDICT_WORKLOAD:
             return await self._workflow_predict_workload(input_data)
-        
+
         elif workflow_type == WorkflowType.PRIORITIZE_TASKS:
             return await self._workflow_prioritize_tasks(input_data)
-        
+
         elif workflow_type == WorkflowType.GENERATE_SCHEDULE:
             return await self._workflow_generate_schedule(input_data)
-        
+
         elif workflow_type == WorkflowType.NATURAL_LANGUAGE_QUERY:
             return await self._workflow_natural_language(input_data)
-        
+
         elif workflow_type == WorkflowType.FULL_PIPELINE:
             return await self._workflow_full_pipeline(input_data)
-        
+
         elif workflow_type == WorkflowType.FULL_PIPELINE_ENHANCED:
             return await self._workflow_full_pipeline_enhanced(input_data)
-        
+
         else:
             return {
                 "success": False,
                 "error": f"Unknown workflow type: {workflow_type}"
             }
-    
+
     async def _workflow_parse_document(
-        self, 
+        self,
         input_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Workflow: Parse document and extract tasks"""
         self.logger.info("Starting document parsing workflow")
-        
+
         # Step 1: Parse document
         parse_response = await self.agents["task_parsing"]._execute_with_error_handling(
-            input_data, 
+            input_data,
             self.context
         )
-        
+
         if parse_response.status == AgentStatus.ERROR:
             return self._format_error_response("task_parsing", parse_response)
-        
+
         return {
             "success": True,
             "workflow": "parse_document",
@@ -140,23 +140,23 @@ class MCPOrchestrator:
             "confidence": parse_response.confidence,
             "explanation": parse_response.explanation
         }
-    
+
     async def _workflow_predict_workload(
-        self, 
+        self,
         input_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Workflow: Predict workload for a task"""
         self.logger.info("Starting workload prediction workflow")
-        
+
         # Step 1: Predict workload
         predict_response = await self.agents["workload_prediction"]._execute_with_error_handling(
             input_data,
             self.context
         )
-        
+
         if predict_response.status == AgentStatus.ERROR:
             return self._format_error_response("workload_prediction", predict_response)
-        
+
         return {
             "success": True,
             "workflow": "predict_workload",
@@ -164,23 +164,23 @@ class MCPOrchestrator:
             "confidence": predict_response.confidence,
             "explanation": predict_response.explanation
         }
-    
+
     async def _workflow_prioritize_tasks(
-        self, 
+        self,
         input_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Workflow: Prioritize tasks"""
         self.logger.info("Starting task prioritization workflow")
-        
+
         # Step 1: Prioritize
         priority_response = await self.agents["prioritization"]._execute_with_error_handling(
             input_data,
             self.context
         )
-        
+
         if priority_response.status == AgentStatus.ERROR:
             return self._format_error_response("prioritization", priority_response)
-        
+
         return {
             "success": True,
             "workflow": "prioritize_tasks",
@@ -189,23 +189,23 @@ class MCPOrchestrator:
             "confidence": priority_response.confidence,
             "explanation": priority_response.explanation
         }
-    
+
     async def _workflow_generate_schedule(
-        self, 
+        self,
         input_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Workflow: Generate optimized schedule"""
         self.logger.info("Starting schedule generation workflow")
-        
+
         # Step 1: Generate schedule
         schedule_response = await self.agents["schedule_optimization"]._execute_with_error_handling(
             input_data,
             self.context
         )
-        
+
         if schedule_response.status == AgentStatus.ERROR:
             return self._format_error_response("schedule_optimization", schedule_response)
-        
+
         return {
             "success": True,
             "workflow": "generate_schedule",
@@ -215,27 +215,27 @@ class MCPOrchestrator:
             "confidence": schedule_response.confidence,
             "explanation": schedule_response.explanation
         }
-    
+
     async def _workflow_natural_language(
-        self, 
+        self,
         input_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Workflow: Process natural language query"""
         self.logger.info("Starting natural language workflow")
-        
+
         # Step 1: Parse query
         nl_response = await self.agents["natural_language"]._execute_with_error_handling(
             input_data,
             self.context
         )
-        
+
         if nl_response.status == AgentStatus.ERROR:
             return self._format_error_response("natural_language", nl_response)
-        
+
         # Step 2: Execute action based on intent (if applicable)
         intent = nl_response.data.get("intent")
         action_result = None
-        
+
         if intent == "view_schedule":
             # Trigger schedule generation
             action_result = await self._workflow_generate_schedule(
@@ -246,7 +246,7 @@ class MCPOrchestrator:
             action_result = await self._workflow_prioritize_tasks(
                 nl_response.data.get("parameters", {})
             )
-        
+
         return {
             "success": True,
             "workflow": "natural_language_query",
@@ -255,75 +255,75 @@ class MCPOrchestrator:
             "action_result": action_result,
             "confidence": nl_response.confidence
         }
-    
+
     async def _workflow_full_pipeline(
-        self, 
+        self,
         input_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         Full pipeline: Parse → Predict → Prioritize → Schedule
-        
+
         This is the complete MyDesk workflow for processing a document
         and generating an optimized schedule.
         """
         self.logger.info("Starting full pipeline workflow")
-        
+
         results = {
             "success": True,
             "workflow": "full_pipeline",
             "stages": {}
         }
-        
+
         # Stage 1: Parse document
         self.logger.info("Pipeline Stage 1: Parsing document")
         parse_response = await self.agents["task_parsing"]._execute_with_error_handling(
             input_data,
             self.context
         )
-        
+
         if parse_response.status == AgentStatus.ERROR:
             return self._format_error_response("task_parsing", parse_response)
-        
+
         tasks = parse_response.data.get("tasks", [])
         results["stages"]["parsing"] = {
             "success": True,
             "tasks_found": len(tasks)
         }
-        
+
         # Stage 2: Predict workload for each task
         self.logger.info(f"Pipeline Stage 2: Predicting workload for {len(tasks)} tasks")
         enriched_tasks = []
-        
+
         for task in tasks:
             predict_response = await self.agents["workload_prediction"]._execute_with_error_handling(
                 {"task": task, "use_hybrid": True},
                 self.context
             )
-            
+
             if predict_response.status == AgentStatus.COMPLETED:
                 task.update({
                     "estimated_hours": predict_response.data.get("estimated_hours"),
                     "stress_score": predict_response.data.get("stress_score"),
                     "complexity": predict_response.data.get("complexity")
                 })
-            
+
             enriched_tasks.append(task)
-        
+
         results["stages"]["workload_prediction"] = {
             "success": True,
             "tasks_analyzed": len(enriched_tasks)
         }
-        
+
         # Stage 3: Prioritize tasks
         self.logger.info("Pipeline Stage 3: Prioritizing tasks")
         priority_response = await self.agents["prioritization"]._execute_with_error_handling(
             {"tasks": enriched_tasks},
             self.context
         )
-        
+
         if priority_response.status == AgentStatus.COMPLETED:
             priorities = priority_response.data.get("priorities", [])
-            
+
             # Add priority scores to tasks
             priority_map = {p["task_id"]: p for p in priorities}
             for task in enriched_tasks:
@@ -331,38 +331,38 @@ class MCPOrchestrator:
                 if task_id in priority_map:
                     task["priority_score"] = priority_map[task_id]["priority_score"]
                     task["priority_rank"] = priority_map[task_id]["rank"]
-        
+
         results["stages"]["prioritization"] = {
             "success": True,
             "high_priority_count": priority_response.data.get("high_priority_count", 0)
         }
-        
+
         # Stage 4: Generate optimized schedule
         self.logger.info("Pipeline Stage 4: Generating schedule")
         schedule_response = await self.agents["schedule_optimization"]._execute_with_error_handling(
             {"tasks": enriched_tasks, "days": input_data.get("schedule_days", 7)},
             self.context
         )
-        
+
         if schedule_response.status == AgentStatus.COMPLETED:
             results["schedule"] = schedule_response.data.get("schedule", {})
             results["workload_analysis"] = schedule_response.data.get("workload_analysis", {})
             results["recommendations"] = schedule_response.data.get("recommendations", [])
-        
+
         results["stages"]["scheduling"] = {
             "success": True,
             "days_scheduled": len(schedule_response.data.get("schedule", {}))
         }
-        
+
         # Final results
         results["tasks"] = enriched_tasks
         results["total_tasks"] = len(enriched_tasks)
-        
+
         return results
-    
+
     def _format_error_response(
-        self, 
-        agent_name: str, 
+        self,
+        agent_name: str,
         response: AgentResponse
     ) -> Dict[str, Any]:
         """Format error response"""
@@ -372,11 +372,11 @@ class MCPOrchestrator:
             "agent": agent_name,
             "timestamp": response.timestamp.isoformat()
         }
-    
+
     def get_agent_status(self) -> Dict[str, Any]:
         """Get status of all agents"""
         return {
-            "mcp_status": "active",
+            "orchestrator_status": "active",
             "mcp_servers": list(self.mcp_service.server_processes.keys()),
             "agents": {
                 name: agent.get_state()
@@ -385,19 +385,19 @@ class MCPOrchestrator:
             "context": self.context,
             "timestamp": datetime.now().isoformat()
         }
-    
+
     async def _workflow_parse_document_enhanced(
-        self, 
+        self,
         input_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Enhanced document parsing workflow with MCP tools"""
         self.logger.info("Starting enhanced document parsing workflow")
-        
+
         try:
             # Use enhanced task parsing agent with MCP capabilities
             agent = self.agents["task_parsing_enhanced"]
             response = await agent.process(input_data, self.context)
-            
+
             if response.status == AgentStatus.COMPLETED:
                 return {
                     "success": True,
@@ -408,7 +408,7 @@ class MCPOrchestrator:
                 }
             else:
                 return self._format_error_response("task_parsing_enhanced", response)
-                
+
         except Exception as e:
             self.logger.error(f"Enhanced document parsing workflow failed: {str(e)}")
             return {
@@ -416,14 +416,14 @@ class MCPOrchestrator:
                 "error": str(e),
                 "workflow": "parse_document_enhanced"
             }
-    
+
     async def _workflow_full_pipeline_enhanced(
-        self, 
+        self,
         input_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Enhanced full pipeline with MCP tools"""
         self.logger.info("Starting enhanced full pipeline workflow")
-        
+
         results = {
             "success": True,
             "stages": {},
@@ -431,7 +431,7 @@ class MCPOrchestrator:
             "mcp_enhancements": {},
             "total_tasks": 0
         }
-        
+
         try:
             # Stage 1: Enhanced Document Parsing
             parse_result = await self._workflow_parse_document_enhanced(input_data)
@@ -439,55 +439,55 @@ class MCPOrchestrator:
                 "success": parse_result["success"],
                 "mcp_tools_used": parse_result.get("mcp_tools_used", [])
             }
-            
+
             if not parse_result["success"]:
                 return parse_result
-            
+
             tasks = parse_result["tasks"]
             results["mcp_enhancements"]["research_insights"] = [
-                task.get("research_insights") for task in tasks 
+                task.get("research_insights") for task in tasks
                 if task.get("research_insights")
             ]
-            
+
             # Stage 2: Workload Prediction
             workload_input = {"tasks": tasks}
             workload_response = await self.agents["workload_prediction"].process(workload_input, self.context)
-            
+
             if workload_response.success:
                 enriched_tasks = workload_response.data.get("tasks", tasks)
                 results["stages"]["workload_prediction"] = {"success": True}
             else:
                 enriched_tasks = tasks
                 results["stages"]["workload_prediction"] = {"success": False}
-            
+
             # Stage 3: Prioritization
             prioritize_input = {"tasks": enriched_tasks}
             prioritize_response = await self.agents["prioritization"].process(prioritize_input, self.context)
-            
+
             if prioritize_response.success:
                 prioritized_tasks = prioritize_response.data.get("prioritized_tasks", enriched_tasks)
                 results["stages"]["prioritization"] = {"success": True}
             else:
                 prioritized_tasks = enriched_tasks
                 results["stages"]["prioritization"] = {"success": False}
-            
+
             # Stage 4: Schedule Optimization
             schedule_input = {"tasks": prioritized_tasks}
             schedule_response = await self.agents["schedule_optimization"].process(schedule_input, self.context)
-            
+
             if schedule_response.success:
                 results["schedule"] = schedule_response.data.get("schedule", {})
                 results["recommendations"] = schedule_response.data.get("recommendations", [])
                 results["stages"]["scheduling"] = {"success": True}
             else:
                 results["stages"]["scheduling"] = {"success": False}
-            
+
             # Final results
             results["tasks"] = prioritized_tasks
             results["total_tasks"] = len(prioritized_tasks)
-            
+
             return results
-            
+
         except Exception as e:
             self.logger.error(f"Enhanced full pipeline workflow failed: {str(e)}")
             return {
@@ -498,4 +498,4 @@ class MCPOrchestrator:
 
 
 # Create singleton instance
-mcp_orchestrator = MCPOrchestrator()
+orchestrator_agent = OrchestratorAgent()

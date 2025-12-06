@@ -2,6 +2,11 @@ import asyncio
 import logging
 import os
 from typing import Any, Dict, List, Optional
+from dotenv import load_dotenv
+
+# Load .env file from backend directory
+env_path = os.path.join(os.path.dirname(__file__), "../../.env")
+load_dotenv(env_path)
 
 from openai import AsyncOpenAI
 

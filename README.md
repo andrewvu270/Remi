@@ -6,7 +6,7 @@ MyDesk helps you optimize your work and study by extracting tasks from documents
 
 ## 🚀 What Makes MyDesk Unique
 
-- **Multi-Agent Architecture**: 5 specialized AI agents working together orchestrated by an MCP (Master Control Program)
+- **Multi-Agent Architecture**: 5 specialized AI agents working together orchestrated by an Orchestrator Agent
 - **Hybrid LLM + ML Predictions**: Combines GPT-4 reasoning with calibrated machine learning for accurate workload estimates
 - **Stress & Burnout Prevention**: Predicts stress levels and warns when workload is too high
 - **Natural Language Interface**: Ask questions like "What's my busiest day this week?" or "Move low-effort tasks to tomorrow"
@@ -31,7 +31,7 @@ MyDesk helps you optimize your work and study by extracting tasks from documents
 ## Technology Stack
 
 ### Multi-Agent System
-- **MCP Orchestrator**: Coordinates all agents and manages workflows
+- **Orchestrator Agent**: Coordinates all agents and manages workflows
 - **Task Parsing Agent**: LLM-powered extraction from PDFs, documents, emails
 - **Workload Prediction Agent**: Hybrid LLM + ML for effort and stress estimation
 - **Prioritization Agent**: Intelligent task ranking with explanations

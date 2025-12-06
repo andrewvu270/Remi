@@ -7,7 +7,7 @@ prioritization, and schedule optimization.
 """
 
 from .agent_base import BaseAgent, AgentResponse, AgentStatus
-from .mcp_orchestrator import MCPOrchestrator, WorkflowType, mcp_orchestrator
+from .orchestrator_agent import OrchestratorAgent, WorkflowType, orchestrator_agent
 from .task_parsing_agent import task_parsing_agent
 from .workload_prediction_agent import workload_prediction_agent
 from .prioritization_agent import prioritization_agent
@@ -19,9 +19,9 @@ __all__ = [
     "BaseAgent",
     "AgentResponse",
     "AgentStatus",
-    "MCPOrchestrator",
+    "OrchestratorAgent",
     "WorkflowType",
-    "mcp_orchestrator",
+    "orchestrator_agent",
     "task_parsing_agent",
     "workload_prediction_agent",
     "prioritization_agent",

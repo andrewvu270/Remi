@@ -83,11 +83,33 @@ const StudyPlan: React.FC = () => {
   const [optimizedSchedule, setOptimizedSchedule] = useState<OptimizedSchedule | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [planOutdated, setPlanOutdated] = useState(false);
 
   useEffect(() => {
     fetchTasks();
     loadLearningStyle();
+    loadStudyPlan();
   }, []);
+
+  const loadStudyPlan = () => {
+    try {
+      const saved = localStorage.getItem('studyPlan');
+      if (saved) {
+        const parsedPlan = JSON.parse(saved);
+        setStudyPlan(parsedPlan);
+      }
+    } catch (error) {
+      console.warn('Failed to load study plan from localStorage:', error);
+    }
+  };
+
+  const saveStudyPlan = (plan: StudyPlan) => {
+    try {
+      localStorage.setItem('studyPlan', JSON.stringify(plan));
+    } catch (error) {
+      console.warn('Failed to save study plan to localStorage:', error);
+    }
+  };
 
   const loadLearningStyle = () => {
     try {
@@ -107,16 +129,36 @@ const StudyPlan: React.FC = () => {
     }
   };
 
+  const normalizeStatus = (status?: string): Task['status'] => {
+    const normalized = typeof status === 'string' ? status.toLowerCase() : 'pending';
+    return (['pending', 'in_progress', 'completed', 'overdue'].includes(normalized)
+      ? normalized
+      : 'pending') as Task['status'];
+  };
+
   const fetchTasks = async () => {
     try {
       const fetchedTasks = await fetchAllTasks();
-      const taskArray = Array.isArray(fetchedTasks) ? fetchedTasks : [];
-      // Only include tasks that are not completed (pending and overdue)
-      const incompleteTasks = taskArray.filter((t: Task) => 
-        t.status === 'pending' || t.status === 'overdue'
+      const taskArray = Array.isArray(fetchedTasks)
+        ? fetchedTasks
+        : Array.isArray(fetchedTasks?.tasks)
+          ? fetchedTasks.tasks
+          : [];
+      const normalizedTasks = taskArray.map(task => ({
+        ...task,
+        status: normalizeStatus(task.status),
+      })) as Task[];
+      // Only include tasks that are not completed (pending, in-progress, and overdue)
+      const incompleteTasks = normalizedTasks.filter((t: Task) => 
+        t.status === 'pending' || t.status === 'in_progress' || t.status === 'overdue'
       );
       setTasks(incompleteTasks);
-      console.log(`Fetched ${incompleteTasks.length} incomplete tasks out of ${taskArray.length} total tasks`);
+      console.log(`Fetched ${incompleteTasks.length} incomplete tasks out of ${normalizedTasks.length} total tasks`);
+      
+      // Check if study plan exists and tasks have changed significantly
+      if (studyPlan && incompleteTasks.length !== studyPlan.sessions.length) {
+        setPlanOutdated(true);
+      }
     } catch (err) {
       setError('Failed to fetch tasks');
     } finally {
@@ -191,6 +233,8 @@ const StudyPlan: React.FC = () => {
       const data = await response.json();
       const parsedPlan = parseStudyPlan(data.plan, data.total_hours, data.days_planned);
       setStudyPlan(parsedPlan);
+      saveStudyPlan(parsedPlan);
+      setPlanOutdated(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate study plan');
     } finally {
@@ -204,36 +248,44 @@ const StudyPlan: React.FC = () => {
     const lines = planText.split('\n');
     let currentDate = '';
     let sessionId = 0;
-
-    lines.forEach(line => {
-      // Extract date from Day headers
+    
+    lines.forEach((line, index) => {
       const dayMatch = line.match(/## Day \d+: (.+)/);
       if (dayMatch) {
         currentDate = dayMatch[1];
         return;
       }
 
-      // Extract study sessions
-      const sessionMatch = line.match(/-\s+(\d{2}:\d{2})-(\d{2}:\d{2})\s+(.+?)\s+\(Priority:\s+(\d+)\/10\)\s+-\s+([\d.]+)h/);
-      if (sessionMatch && currentDate) {
-        const [, startTime, endTime, taskTitle, priority, hours] = sessionMatch;
-        
-        // Find corresponding task
-        const task = tasks.find(t => t.title.includes(taskTitle.split('(')[0].trim()));
-        
-        if (task) {
-          sessions.push({
-            id: `session-${sessionId++}`,
-            task_id: task.id,
-            task_title: task.title,
-            start_time: startTime,
-            end_time: endTime,
-            day: currentDate,
-            priority: parseInt(priority),
-            estimated_hours: parseFloat(hours),
-            research_tips: task.research_insights?.recommendations || []
-          });
-        }
+      if (!line.startsWith('-')) return;
+      
+      const timeMatch = line.match(/\*{0,2}(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})\*{0,2}/);
+      if (!timeMatch) return;
+      
+      const [_, startTime, endTime] = timeMatch;
+      
+      const titleMatch = line.match(/\*{0,2}\d{2}:\d{2}\s*-\s*\d{2}:\d{2}\*{0,2}\s+(.+?)\s+\(Priority:/);
+      const taskTitle = titleMatch ? titleMatch[1] : 'Unknown Task';
+      
+      const priorityMatch = line.match(/Priority:\s+([\d.]+)\/10/);
+      const priority = priorityMatch ? parseFloat(priorityMatch[1]) : 5;
+      
+      const hoursMatch = line.match(/([\d.]+)h/);
+      const hours = hoursMatch ? parseFloat(hoursMatch[1]) : 1;
+      
+      const task = tasks.find(t => t.title.includes(taskTitle.split('(')[0].trim()));
+      
+      if (task) {
+        sessions.push({
+          id: `session-${sessionId++}`,
+          task_id: task.id,
+          task_title: task.title,
+          start_time: startTime,
+          end_time: endTime,
+          day: currentDate,
+          priority: priority,
+          estimated_hours: hours,
+          research_tips: task.research_insights?.recommendations || []
+        });
       }
     });
 
@@ -325,11 +377,12 @@ const StudyPlan: React.FC = () => {
 
   const getDays = () => {
     const days = [];
-    const today = new Date();
+    // Start from December 1, 2025 to match the study plan date range
+    const startDate = new Date('2025-12-01');
     
     for (let i = 0; i < daysToPlan; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
       days.push({
         date: date.toISOString().split('T')[0],
         name: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
@@ -341,10 +394,46 @@ const StudyPlan: React.FC = () => {
 
   const getSessionForTimeSlot = (day: string, time: string) => {
     if (!studyPlan) return null;
-    
+
+    const targetHour = parseInt(time.split(':')[0]);
+
     return studyPlan.sessions.find(session => {
       const sessionTime = session.start_time;
-      return session.day === day && sessionTime.startsWith(time.split(':')[0]);
+
+      // Parse session day (e.g., "December 1, 2025") and convert to timeline format
+      try {
+        const sessionDateStr = session.day;
+        // Extract month and day from session.day (e.g., "December 1, 2025" -> "Dec 1")
+        const monthNames = {
+          'January': 'Jan', 'February': 'Feb', 'March': 'Mar', 'April': 'Apr',
+          'May': 'May', 'June': 'Jun', 'July': 'Jul', 'August': 'Aug',
+          'September': 'Sep', 'October': 'Oct', 'November': 'Nov', 'December': 'Dec'
+        };
+
+        const parts = sessionDateStr.split(' ');
+        if (parts.length >= 2) {
+          const month = monthNames[parts[0] as keyof typeof monthNames] || parts[0];
+          const dayNum = parts[1].replace(',', '');
+          const sessionDayFormatted = `${month} ${dayNum}`;
+
+          // Extract day part from timeline day (e.g., "Sun, Dec 1" -> "Dec 1")
+          const timelineParts = day.split(', ');
+          const timelineDayFormatted = timelineParts[1] || day;
+
+          // Check if day matches AND session starts within this hour
+          if (sessionDayFormatted === timelineDayFormatted) {
+            const sessionHour = parseInt(sessionTime.split(':')[0]);
+            // Session should appear in the time slot of its start hour
+            if (sessionHour === targetHour) {
+              return true;
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Error parsing session date:', session.day, error);
+      }
+
+      return false;
     });
   };
 
@@ -442,6 +531,11 @@ const StudyPlan: React.FC = () => {
               >
                 {generating ? 'Generating...' : 'Generate Plan'}
               </Button>
+              {planOutdated && studyPlan && (
+                <Alert severity="warning" sx={{ ml: 2, flexGrow: 1 }}>
+                  Study plan may be outdated due to task changes. Consider regenerating.
+                </Alert>
+              )}
               <Button
                 variant="contained"
                 color="secondary"
@@ -581,7 +675,7 @@ const StudyPlan: React.FC = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                   <TimeIcon color="primary" />
-                  <Typography variant="h6">{studyPlan.total_hours}h</Typography>
+                  <Typography variant="h6">{studyPlan!.total_hours}h</Typography>
                 </Box>
                 <Typography variant="body2" color="textSecondary">
                   Total Study Time
@@ -595,7 +689,7 @@ const StudyPlan: React.FC = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                   <CalendarIcon color="primary" />
-                  <Typography variant="h6">{studyPlan.days_planned}</Typography>
+                  <Typography variant="h6">{studyPlan!.days_planned}</Typography>
                 </Box>
                 <Typography variant="body2" color="textSecondary">
                   Days Planned
@@ -609,11 +703,11 @@ const StudyPlan: React.FC = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                   <PsychologyIcon 
-                    color={studyPlan.stress_level === 'high' ? 'error' : 
-                           studyPlan.stress_level === 'medium' ? 'warning' : 'success'} 
+                    color={studyPlan!.stress_level === 'high' ? 'error' : 
+                           studyPlan!.stress_level === 'medium' ? 'warning' : 'success'} 
                   />
                   <Typography variant="h6" sx={{ textTransform: 'capitalize' }}>
-                    {studyPlan.stress_level}
+                    {studyPlan!.stress_level}
                   </Typography>
                 </Box>
                 <Typography variant="body2" color="textSecondary">
@@ -628,7 +722,7 @@ const StudyPlan: React.FC = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                   <SearchIcon color="primary" />
-                  <Typography variant="h6">{studyPlan.sessions.length}</Typography>
+                  <Typography variant="h6">{studyPlan!.sessions.length}</Typography>
                 </Box>
                 <Typography variant="body2" color="textSecondary">
                   Study Sessions
@@ -744,15 +838,41 @@ const StudyPlan: React.FC = () => {
             </Paper>
           </Grid>
 
+          {/* Simple Session List for Debugging */}
+          <Grid item xs={12}>
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                All Study Sessions ({studyPlan!.sessions.length})
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                {studyPlan!.sessions.map((session) => (
+                  <Card key={session.id} sx={{ minWidth: 200 }}>
+                    <CardContent>
+                      <Typography variant="subtitle2" color="primary">
+                        {session.task_title}
+                      </Typography>
+                      <Typography variant="body2">
+                        {session.day} at {session.start_time}-{session.end_time}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        Priority: {session.priority}/10 | {session.estimated_hours}h
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Box>
+            </Paper>
+          </Grid>
+
           {/* Recommendations */}
-          {studyPlan.recommendations.length > 0 && (
+          {studyPlan!.recommendations.length > 0 && (
             <Grid item xs={12}>
               <Paper sx={{ p: 3 }}>
                 <Typography variant="h6" gutterBottom>
                   Study Recommendations
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {studyPlan.recommendations.map((rec, index) => (
+                  {studyPlan!.recommendations.map((rec, index) => (
                     <Chip
                       key={index}
                       label={rec.replace(/^Tip:\s*/, '')}

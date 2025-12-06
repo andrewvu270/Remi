@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Optional
 import logging
 
-from ..agents.mcp_orchestrator import mcp_orchestrator, WorkflowType
+from ..agents.orchestrator_agent import orchestrator_agent, WorkflowType
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ async def parse_document(request: ParseDocumentRequest):
         if request.course_id:
             context["course_id"] = request.course_id
         
-        result = await mcp_orchestrator.execute_workflow(
+        result = await orchestrator_agent.execute_workflow(
             WorkflowType.PARSE_DOCUMENT,
             input_data,
             context
@@ -112,7 +112,7 @@ async def predict_workload(request: PredictWorkloadRequest):
         if request.user_id:
             context["user_id"] = request.user_id
         
-        result = await mcp_orchestrator.execute_workflow(
+        result = await orchestrator_agent.execute_workflow(
             WorkflowType.PREDICT_WORKLOAD,
             input_data,
             context
@@ -142,7 +142,7 @@ async def prioritize_tasks(request: PrioritizeTasksRequest):
         if request.user_id:
             context["user_id"] = request.user_id
         
-        result = await mcp_orchestrator.execute_workflow(
+        result = await orchestrator_agent.execute_workflow(
             WorkflowType.PRIORITIZE_TASKS,
             input_data,
             context
@@ -173,7 +173,7 @@ async def generate_schedule(request: GenerateScheduleRequest):
         if request.user_id:
             context["user_id"] = request.user_id
         
-        result = await mcp_orchestrator.execute_workflow(
+        result = await orchestrator_agent.execute_workflow(
             WorkflowType.GENERATE_SCHEDULE,
             input_data,
             context
@@ -205,7 +205,7 @@ async def natural_language_query(request: NaturalLanguageQueryRequest):
         if request.user_id:
             context["user_id"] = request.user_id
         
-        result = await mcp_orchestrator.execute_workflow(
+        result = await orchestrator_agent.execute_workflow(
             WorkflowType.NATURAL_LANGUAGE_QUERY,
             input_data,
             context
@@ -239,7 +239,7 @@ async def full_pipeline(request: FullPipelineRequest):
         if request.course_id:
             context["course_id"] = request.course_id
         
-        result = await mcp_orchestrator.execute_workflow(
+        result = await orchestrator_agent.execute_workflow(
             WorkflowType.FULL_PIPELINE,
             input_data,
             context
@@ -260,7 +260,7 @@ async def get_agent_status():
     Useful for health checks and debugging.
     """
     try:
-        status = mcp_orchestrator.get_agent_status()
+        status = orchestrator_agent.get_agent_status()
         return status
         
     except Exception as e:

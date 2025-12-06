@@ -14,7 +14,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: academic_scheduler_backend
-    env_file: .env
+    env_file: backend/.env
     environment:
       - REDIS_URL=redis://redis:6379
     ports:

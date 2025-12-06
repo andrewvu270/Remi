@@ -35,40 +35,51 @@ if ! docker info &> /dev/null; then
     exit 1
 fi
 
-# Create .env file if it doesn't exist
-if [ ! -f .env ]; then
-    echo "📝 Creating .env file from template..."
-    cp backend/.env.example .env
+# Create backend/.env file if it doesn't exist
+if [ ! -f backend/.env ]; then
+    echo "📝 Creating backend/.env file from template..."
+    cp backend/.env.example backend/.env
     echo ""
-    echo "⚠️  IMPORTANT: You must edit the .env file before continuing!"
+    echo "⚠️  IMPORTANT: You must edit the backend/.env file before continuing!"
     echo ""
     echo "Required steps:"
     echo "1. Get OpenAI API Key: https://platform.openai.com/api-keys"
-    echo "2. Edit .env file and add your OPENAI_API_KEY"
-    echo "3. Generate a secure SECRET_KEY for JWT"
+    echo "2. Get Groq API Key: https://console.groq.com/keys"
+    echo "3. Edit backend/.env file and add your API keys"
+    echo "4. Generate a secure SECRET_KEY for JWT"
     echo ""
     echo "Optional: Supabase setup (if using instead of local PostgreSQL)"
     echo "   - URL and Keys: https://supabase.com/dashboard"
     echo ""
-    read -p "Press Enter after you've configured your .env file..."
+    read -p "Press Enter after you've configured your backend/.env file..."
 else
-    echo "✅ .env file already exists"
+    echo "✅ backend/.env file already exists"
     
     # Check if OpenAI API key is configured
-    if grep -q "your_openai_api_key" .env; then
+    if grep -q "your_openai_api_key" backend/.env; then
         echo ""
-        echo "⚠️  WARNING: OpenAI API key is not configured in .env file"
-        echo "   Please edit .env and add your actual OPENAI_API_KEY"
+        echo "⚠️  WARNING: OpenAI API key is not configured in backend/.env file"
+        echo "   Please edit backend/.env and add your actual OPENAI_API_KEY"
         echo "   Get your key at: https://platform.openai.com/api-keys"
         echo ""
         read -p "Press Enter to continue anyway..."
     fi
     
-    # Check if Supabase credentials are configured
-    if grep -q "your-project-id.supabase.co" .env; then
+    # Check if Groq API key is configured
+    if grep -q "your_groq_api_key" backend/.env; then
         echo ""
-        echo "⚠️  WARNING: Supabase credentials are not configured in .env file"
-        echo "   Please edit .env and add your actual Supabase credentials"
+        echo "⚠️  WARNING: Groq API key is not configured in backend/.env file"
+        echo "   Please edit backend/.env and add your actual GROQ_API_KEY"
+        echo "   Get your key at: https://console.groq.com/keys"
+        echo ""
+        read -p "Press Enter to continue anyway..."
+    fi
+    
+    # Check if Supabase credentials are configured
+    if grep -q "your-project-id.supabase.co" backend/.env; then
+        echo ""
+        echo "⚠️  WARNING: Supabase credentials are not configured in backend/.env file"
+        echo "   Please edit backend/.env and add your actual Supabase credentials"
         echo "   Get your credentials at: https://supabase.com/dashboard"
         echo ""
         read -p "Press Enter to continue anyway..."
@@ -137,7 +148,7 @@ if docker-compose ps | grep -q "Up"; then
     echo "   - Run migrations: supabase db push"
     echo ""
     echo "🎯 Next steps:"
-    echo "   1. Edit .env file with your API keys"
+    echo "   1. Edit backend/.env file with your API keys"
     echo "   2. Link your Supabase project:"
     if command -v supabase &> /dev/null; then
         echo "      supabase link --project-ref your-project-id"

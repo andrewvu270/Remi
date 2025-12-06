@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Optional
 import logging
 
-from ..agents.mcp_orchestrator import mcp_orchestrator, WorkflowType
+from ..agents.orchestrator_agent import orchestrator_agent, WorkflowType
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ async def parse_document_enhanced(request: EnhancedDocumentParseRequest):
             "use_mcp": True
         }
         
-        result = await mcp_orchestrator.execute_workflow(
+        result = await orchestrator_agent.execute_workflow(
             WorkflowType.PARSE_DOCUMENT_ENHANCED,
             input_data,
             user_context
@@ -107,7 +107,7 @@ async def full_pipeline_enhanced(request: EnhancedPipelineRequest):
             "enhanced_features": True
         }
         
-        result = await mcp_orchestrator.execute_workflow(
+        result = await orchestrator_agent.execute_workflow(
             WorkflowType.FULL_PIPELINE_ENHANCED,
             input_data,
             user_context
@@ -138,7 +138,7 @@ async def full_pipeline_enhanced(request: EnhancedPipelineRequest):
 async def get_mcp_status():
     """Get MCP service and agent status"""
     try:
-        status = mcp_orchestrator.get_agent_status()
+        status = orchestrator_agent.get_agent_status()
         return status
     except Exception as e:
         logger.error(f"MCP status endpoint error: {str(e)}")

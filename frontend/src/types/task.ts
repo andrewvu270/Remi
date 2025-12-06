@@ -7,7 +7,7 @@ export interface Task {
   weight_score?: number;  // Made optional to match backend
   predicted_hours: number;
   priority_score: number;
-  status: 'pending' | 'completed' | 'overdue';
+  status: 'pending' | 'in_progress' | 'completed' | 'overdue';
   grade_percentage: number;
   course_code: string;
   difficulty_level?: number;
@@ -50,4 +50,4 @@ export interface Task {
 }
 
 // Helper type for task status
-export type TaskStatus = 'pending' | 'completed' | 'overdue';
+export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'overdue';
