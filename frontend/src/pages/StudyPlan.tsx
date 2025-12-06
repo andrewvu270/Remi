@@ -154,11 +154,6 @@ const StudyPlan: React.FC = () => {
       );
       setTasks(incompleteTasks);
       console.log(`Fetched ${incompleteTasks.length} incomplete tasks out of ${normalizedTasks.length} total tasks`);
-      
-      // Check if study plan exists and tasks have changed significantly
-      if (studyPlan && incompleteTasks.length !== studyPlan.sessions.length) {
-        setPlanOutdated(true);
-      }
     } catch (err) {
       setError('Failed to fetch tasks');
     } finally {
@@ -196,46 +191,62 @@ const StudyPlan: React.FC = () => {
   };
 
   const generateStudyPlan = async () => {
-    if (tasks.length === 0) return;
+    console.log('generateStudyPlan called, tasks.length:', tasks.length);
+    if (tasks.length === 0) {
+      console.log('No tasks available, returning early');
+      return;
+    }
     
     setGenerating(true);
     setError(null);
     
     try {
+      console.log('Making API call to:', `${API_BASE_URL}/api/study-plan/generate`);
+      const requestData = {
+        tasks: tasks.map(task => ({
+          id: task.id,
+          title: task.title,
+          task_type: task.task_type,
+          due_date: task.due_date,
+          priority_score: task.priority_score,
+          predicted_hours: task.predicted_hours,
+          grade_percentage: task.grade_percentage,
+          research_sources: task.research_sources,
+          wiki_summary: task.wiki_summary,
+          academic_sources: task.academic_sources,
+          community_answers: task.community_answers,
+          research_insights: task.research_insights
+        })),
+        study_hours_per_day: studyHours,
+        days_to_plan: daysToPlan
+      };
+      console.log('Request data:', requestData);
+      
       const response = await fetch(`${API_BASE_URL}/api/study-plan/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`
         },
-        body: JSON.stringify({
-          tasks: tasks.map(task => ({
-            id: task.id,
-            title: task.title,
-            task_type: task.task_type,
-            due_date: task.due_date,
-            priority_score: task.priority_score,
-            predicted_hours: task.predicted_hours,
-            grade_percentage: task.grade_percentage,
-            research_sources: task.research_sources,
-            wiki_summary: task.wiki_summary,
-            academic_sources: task.academic_sources,
-            community_answers: task.community_answers,
-            research_insights: task.research_insights
-          })),
-          study_hours_per_day: studyHours,
-          days_to_plan: daysToPlan
-        })
+        body: JSON.stringify(requestData)
       });
 
-      if (!response.ok) throw new Error('Failed to generate study plan');
+      console.log('Response status:', response.status);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error:', errorText);
+        throw new Error(`Failed to generate study plan: ${response.status} ${errorText}`);
+      }
       
       const data = await response.json();
+      console.log('API Response:', data);
       const parsedPlan = parseStudyPlan(data.plan, data.total_hours, data.days_planned);
+      console.log('Parsed plan:', parsedPlan);
       setStudyPlan(parsedPlan);
       saveStudyPlan(parsedPlan);
       setPlanOutdated(false);
     } catch (err) {
+      console.error('Error in generateStudyPlan:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate study plan');
     } finally {
       setGenerating(false);
@@ -393,40 +404,51 @@ const StudyPlan: React.FC = () => {
   };
 
   const getSessionForTimeSlot = (day: string, time: string) => {
-    if (!studyPlan) return null;
+    if (!studyPlan) {
+      return null;
+    }
 
     const targetHour = parseInt(time.split(':')[0]);
 
     return studyPlan.sessions.find(session => {
       const sessionTime = session.start_time;
 
-      // Parse session day (e.g., "December 1, 2025") and convert to timeline format
       try {
-        const sessionDateStr = session.day;
-        // Extract month and day from session.day (e.g., "December 1, 2025" -> "Dec 1")
-        const monthNames = {
-          'January': 'Jan', 'February': 'Feb', 'March': 'Mar', 'April': 'Apr',
-          'May': 'May', 'June': 'Jun', 'July': 'Jul', 'August': 'Aug',
-          'September': 'Sep', 'October': 'Oct', 'November': 'Nov', 'December': 'Dec'
-        };
+        // Create Date object from session.day (e.g., "December 1, 2025")
+        const sessionDate = new Date(session.day);
+        if (isNaN(sessionDate.getTime())) {
+          console.warn('Invalid session date:', session.day);
+          return false;
+        }
 
-        const parts = sessionDateStr.split(' ');
-        if (parts.length >= 2) {
-          const month = monthNames[parts[0] as keyof typeof monthNames] || parts[0];
-          const dayNum = parts[1].replace(',', '');
-          const sessionDayFormatted = `${month} ${dayNum}`;
+        // Extract month and day from the session date
+        const sessionMonth = sessionDate.getMonth(); // 0-based
+        const sessionDay = sessionDate.getDate();
 
-          // Extract day part from timeline day (e.g., "Sun, Dec 1" -> "Dec 1")
-          const timelineParts = day.split(', ');
-          const timelineDayFormatted = timelineParts[1] || day;
+        // Parse timeline day (e.g., "Sun, Dec 1") to get month and day
+        const timelineParts = day.split(', ');
+        if (timelineParts.length < 2) {
+          return false;
+        }
 
-          // Check if day matches AND session starts within this hour
-          if (sessionDayFormatted === timelineDayFormatted) {
-            const sessionHour = parseInt(sessionTime.split(':')[0]);
-            // Session should appear in the time slot of its start hour
-            if (sessionHour === targetHour) {
-              return true;
-            }
+        const timelineDateStr = timelineParts[1]; // "Dec 1"
+        const [monthStr, dayStr] = timelineDateStr.split(' ');
+
+        // Convert month name to number
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const timelineMonth = monthNames.indexOf(monthStr);
+        const timelineDay = parseInt(dayStr);
+
+        if (timelineMonth === -1 || isNaN(timelineDay)) {
+          return false;
+        }
+
+        // Check if day matches AND session starts within this hour
+        if (sessionMonth === timelineMonth && sessionDay === timelineDay) {
+          const sessionHour = parseInt(sessionTime.split(':')[0]);
+          // Session should appear in the time slot of its start hour
+          if (sessionHour === targetHour) {
+            return true;
           }
         }
       } catch (error) {
@@ -755,112 +777,118 @@ const StudyPlan: React.FC = () => {
             </Card>
           </Grid>
 
-          {/* Timeline Grid */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 2, overflowX: 'auto' }}>
-              <Typography variant="h6" gutterBottom>
-                Study Timeline
-              </Typography>
-              
-              <Box sx={{ minWidth: 800 }}>
-                {/* Time headers */}
-                <Box sx={{ display: 'flex', mb: 1 }}>
-                  <Box sx={{ width: 120, p: 1, fontWeight: 'bold' }}>
-                    Day/Time
-                  </Box>
-                  {getTimeBlocks().map(time => (
-                    <Box key={time} sx={{ width: 80, p: 1, textAlign: 'center', fontSize: '0.8rem' }}>
-                      {time}
-                    </Box>
-                  ))}
-                </Box>
-
-                {/* Day rows */}
-                {getDays().map(day => (
-                  <Box key={day.date} sx={{ display: 'flex', borderBottom: '1px solid #eee' }}>
-                    <Box sx={{ width: 120, p: 1, fontWeight: 'bold', fontSize: '0.9rem' }}>
-                      {day.name}
-                    </Box>
-                    {getTimeBlocks().map(time => {
-                      const session = getSessionForTimeSlot(day.name, time);
-                      const isCompleted = session && completedSessions.has(session.id);
-                      return (
-                        <Box
-                          key={time}
-                          sx={{
-                            width: 80,
-                            height: 60,
-                            p: 0.5,
-                            border: '1px solid #f0f0f0',
-                            bgcolor: isCompleted ? 'grey.300' : 
-                                   session ? theme.palette[getPriorityColor(session.priority)].light : 'transparent',
-                            cursor: session ? 'pointer' : 'default',
-                            position: 'relative',
-                            '&:hover': session ? { 
-                              bgcolor: isCompleted ? 'grey.400' : theme.palette[getPriorityColor(session.priority)].main 
-                            } : {}
-                          }}
-                          onClick={() => session && toggleSessionCompletion(session.id)}
-                        >
-                          {session && (
-                            <Box sx={{ fontSize: '0.7rem', lineHeight: 1.2 }}>
-                              {isCompleted && (
-                                <Box sx={{ 
-                                  position: 'absolute', 
-                                  top: 2, 
-                                  right: 2, 
-                                  fontSize: '0.8rem',
-                                  color: 'green'
-                                }}>
-                                  ✓
-                                </Box>
-                              )}
-                              <Typography variant="caption" sx={{ 
-                                fontWeight: 'bold',
-                                textDecoration: isCompleted ? 'line-through' : 'none'
-                              }}>
-                                {session.task_title.length > 15 
-                                  ? session.task_title.substring(0, 15) + '...'
-                                  : session.task_title
-                                }
-                              </Typography>
-                              <Typography variant="caption" sx={{ display: 'block' }}>
-                                {session.start_time}-{session.end_time}
-                              </Typography>
-                            </Box>
-                          )}
-                        </Box>
-                      );
-                    })}
-                  </Box>
-                ))}
-              </Box>
-            </Paper>
-          </Grid>
-
-          {/* Simple Session List for Debugging */}
+          {/* Daily Study Schedule */}
           <Grid item xs={12}>
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
-                All Study Sessions ({studyPlan!.sessions.length})
+                Daily Study Schedule
               </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                {studyPlan!.sessions.map((session) => (
-                  <Card key={session.id} sx={{ minWidth: 200 }}>
-                    <CardContent>
-                      <Typography variant="subtitle2" color="primary">
-                        {session.task_title}
-                      </Typography>
-                      <Typography variant="body2">
-                        {session.day} at {session.start_time}-{session.end_time}
-                      </Typography>
-                      <Typography variant="caption" color="textSecondary">
-                        Priority: {session.priority}/10 | {session.estimated_hours}h
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                ))}
-              </Box>
+              
+              {studyPlan!.sessions.length === 0 ? (
+                <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center', py: 4 }}>
+                  No study sessions scheduled. Generate a study plan to see your schedule.
+                </Typography>
+              ) : (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {getDays().map(day => {
+                    const daySessions = studyPlan!.sessions.filter(session => {
+                      const sessionDate = new Date(session.day);
+                      const sessionMonth = sessionDate.getMonth();
+                      const sessionDay = sessionDate.getDate();
+                      
+                      const timelineParts = day.name.split(', ');
+                      if (timelineParts.length < 2) return false;
+                      
+                      const timelineDateStr = timelineParts[1];
+                      const [monthStr, dayStr] = timelineDateStr.split(' ');
+                      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                      const timelineMonth = monthNames.indexOf(monthStr);
+                      const timelineDay = parseInt(dayStr);
+                      
+                      return sessionMonth === timelineMonth && sessionDay === timelineDay;
+                    });
+                    
+                    if (daySessions.length === 0) return null;
+                    
+                    return (
+                      <Card key={day.date} sx={{ border: '1px solid #e0e0e0', '&:hover': { boxShadow: 2 } }}>
+                        <CardContent>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                              {day.name}
+                            </Typography>
+                            <Chip 
+                              label={`${daySessions.length} sessions`} 
+                              size="small" 
+                              color="primary"
+                              variant="outlined"
+                            />
+                          </Box>
+                          
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                            {daySessions
+                              .sort((a, b) => a.start_time.localeCompare(b.start_time))
+                              .map(session => {
+                                const isCompleted = completedSessions.has(session.id);
+                                return (
+                                  <Box
+                                    key={session.id}
+                                    sx={{
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      alignItems: 'center',
+                                      p: 1.5,
+                                      border: '1px solid #f0f0f0',
+                                      borderRadius: 1,
+                                      bgcolor: isCompleted ? 'grey.50' : 'background.paper',
+                                      cursor: 'pointer',
+                                      '&:hover': { bgcolor: isCompleted ? 'grey.100' : 'action.hover' }
+                                    }}
+                                    onClick={() => toggleSessionCompletion(session.id)}
+                                  >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        {isCompleted && (
+                                          <Box sx={{ color: 'success.main', fontSize: '1.2rem' }}>
+                                            ✓
+                                          </Box>
+                                        )}
+                                        <Typography variant="body2" sx={{ 
+                                          fontWeight: 'bold',
+                                          textDecoration: isCompleted ? 'line-through' : 'none',
+                                          color: isCompleted ? 'text.secondary' : 'text.primary'
+                                        }}>
+                                          {session.task_title}
+                                        </Typography>
+                                      </Box>
+                                      <Chip
+                                        label={`${session.start_time}-${session.end_time}`}
+                                        size="small"
+                                        variant="outlined"
+                                        color={getPriorityColor(session.priority) as any}
+                                      />
+                                    </Box>
+                                    
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <Typography variant="caption" color="textSecondary">
+                                        {session.estimated_hours}h
+                                      </Typography>
+                                      <Chip
+                                        label={`Priority ${session.priority}/10`}
+                                        size="small"
+                                        color={getPriorityColor(session.priority) as any}
+                                      />
+                                    </Box>
+                                  </Box>
+                                );
+                              })}
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </Box>
+              )}
             </Paper>
           </Grid>
 
