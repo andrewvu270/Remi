@@ -85,7 +85,7 @@ const Survey: React.FC = () => {
   const handleGenerateSample = async () => {
     setGenerating(true);
     setMessage(null);
-    
+
     try {
       // For now, generate a realistic sample locally
       // This can be replaced with actual AI generation when backend is ready
@@ -156,18 +156,18 @@ const Survey: React.FC = () => {
           notes: 'Covers chapters 1-8, in-class exam',
         },
       ];
-      
+
       // Pick a random sample
       const randomSample = sampleTasks[Math.floor(Math.random() * sampleTasks.length)];
-      
+
       // Set the sample in the form
       setItems([randomSample]);
-      
-      setMessage({ 
-        type: 'success', 
-        text: 'Sample data loaded - review and modify as needed, then click Submit Survey' 
+
+      setMessage({
+        type: 'success',
+        text: 'Sample data loaded - review and modify as needed, then click Submit Survey'
       });
-      
+
     } catch (error) {
       console.error('Error generating sample:', error);
       setMessage({ type: 'error', text: 'Failed to generate sample' });
@@ -178,7 +178,7 @@ const Survey: React.FC = () => {
 
   const handleSubmit = async () => {
     console.log('Submit button clicked');
-    
+
     if (items.some(item => !item.task_title || !item.due_date)) {
       setMessage({ type: 'error', text: 'Please fill in all required fields' });
       return;
@@ -186,7 +186,7 @@ const Survey: React.FC = () => {
 
     console.log('Submitting survey with items:', items);
     setLoading(true);
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/survey/submit`, {
         method: 'POST',
@@ -198,19 +198,19 @@ const Survey: React.FC = () => {
       });
 
       console.log('Response status:', response.status);
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Server error:', errorText);
         throw new Error(`Failed to submit survey: ${errorText}`);
       }
-      
+
       const data = await response.json();
       console.log('Survey submitted successfully:', data);
-      
-      setMessage({ 
-        type: 'success', 
-        text: `Survey submitted successfully! ${data.saved_to_db ? `Saved ${data.saved_to_db} records to database.` : ''}` 
+
+      setMessage({
+        type: 'success',
+        text: `Survey submitted successfully! ${data.saved_to_db ? `Saved ${data.saved_to_db} records to database.` : ''}`
       });
       setItems([
         {
@@ -247,7 +247,7 @@ const Survey: React.FC = () => {
         </Typography>
         <Alert severity="info" sx={{ mb: 3 }}>
           <Typography variant="body2">
-            🤖 <strong>How your survey helps:</strong> Your task completion data trains our LightGBM machine learning model to better predict task duration and difficulty. Each submission improves the accuracy of our scheduling recommendations for all users!
+            <strong>How your survey helps:</strong> Your task completion data trains our machine learning model to better predict task duration and difficulty. Each submission improves the accuracy of our scheduling recommendations for all users!
           </Typography>
         </Alert>
         <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>
@@ -483,7 +483,7 @@ const Survey: React.FC = () => {
           {loading ? <CircularProgress size={24} /> : 'Submit Survey'}
         </Button>
       </Box>
-      </Container>
+    </Container>
   );
 };
 

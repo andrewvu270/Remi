@@ -2,19 +2,19 @@ import json
 import re
 from typing import List, Dict, Any, Optional
 from datetime import datetime, date, timedelta
-from openai import AsyncOpenAI
 from ..config import settings
+from .llm_client import LLMClientManager
 
 
 class TaskExtractionService:
     """Service for extracting academic tasks from syllabus text using OpenAI API."""
     
     def __init__(self):
-        if settings.OPENAI_API_KEY:
-            self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-        else:
-            print("Warning: OpenAI API key not configured. Study plan generation will not work.")
-            self.client = None
+        try:
+            self.client_manager = LLMClientManager()
+        except ValueError:
+            print("Warning: No LLM provider configured. Study plan generation will not work.")
+            self.client_manager = None
     
     async def extract_tasks_from_syllabus(self, syllabus_text: str, course_name: str = "") -> List[Dict[str, Any]]:
         """
@@ -28,15 +28,14 @@ class TaskExtractionService:
             List of extracted tasks with their properties
         """
         try:
-            if not self.client:
+            if not self.client_manager:
                 raise Exception("OpenAI API key not configured")
             
             # Prepare the prompt for OpenAI
             prompt = self._build_extraction_prompt(syllabus_text, course_name)
             
             # Call OpenAI API using new syntax
-            response = await self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+            response = await self.client_manager.chat_completion(
                 messages=[
                     {
                         "role": "system",

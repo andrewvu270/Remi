@@ -1,16 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Container,
-  Grid,
   Paper,
   Box,
   Typography,
   Button,
-  LinearProgress,
-  Alert,
+  Grid,
   CircularProgress,
-  Fab,
+  Alert,
+  Fab
 } from '@mui/material';
+
 import {
   TaskAlt as CompletedIcon,
   HourglassEmpty as PendingIcon,
@@ -134,7 +134,6 @@ const Dashboard = () => {
     summary: string;
     nextStep?: string;
   } | null>(null);
-  const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   const refreshStats = useCallback(async () => {
@@ -211,7 +210,7 @@ const Dashboard = () => {
     const uploadResponse = await fetch(`${API_BASE_URL}/api/upload/syllabus`, {
       method: 'POST',
       headers: {
-        'Authorization': localStorage.getItem('access_token') ? 
+        'Authorization': localStorage.getItem('access_token') ?
           `Bearer ${localStorage.getItem('access_token')}` : '',
       },
       body: formData,
@@ -291,7 +290,6 @@ const Dashboard = () => {
     if (!files || files.length === 0) return;
 
     setUploading(true);
-    setAnalysisLoading(true);
     setUploadMessage(null);
     setAnalysisError(null);
 
@@ -306,9 +304,9 @@ const Dashboard = () => {
         setUploadedFiles((prev) => [...prev, file.name]);
       }
 
-      setUploadMessage({ 
-        type: 'success', 
-        text: 'Files processed. Ask the AI assistant for next-step planning or scheduling.' 
+      setUploadMessage({
+        type: 'success',
+        text: 'Files processed. Ask the AI assistant for next-step planning or scheduling.'
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to handle files';
@@ -316,29 +314,28 @@ const Dashboard = () => {
       setAnalysisError(errorMessage);
     } finally {
       setUploading(false);
-      setAnalysisLoading(false);
     }
   };
 
   const stats = [
-    { 
-      label: 'Completed', 
-      value: statsSnapshot.completed, 
-      icon: CompletedIcon, 
+    {
+      label: 'Completed',
+      value: statsSnapshot.completed,
+      icon: CompletedIcon,
       color: '#388e3c',
       bgGradient: 'linear-gradient(135deg, #4caf50, #66bb6a)'
     },
-    { 
-      label: 'Pending', 
-      value: statsSnapshot.pending, 
-      icon: PendingIcon, 
+    {
+      label: 'Pending',
+      value: statsSnapshot.pending,
+      icon: PendingIcon,
       color: '#f57c00',
       bgGradient: 'linear-gradient(135deg, #ff9800, #ffb74d)'
     },
-    { 
-      label: 'Due Soon', 
-      value: statsSnapshot.dueSoon, 
-      icon: DueSoonIcon, 
+    {
+      label: 'Due Soon',
+      value: statsSnapshot.dueSoon,
+      icon: DueSoonIcon,
       color: '#d32f2f',
       bgGradient: 'linear-gradient(135deg, #f44336, #ef5350)'
     },
@@ -524,19 +521,11 @@ const Dashboard = () => {
                         disabled={uploading}
                       />
                     </Button>
-                    <Typography variant="caption" color="text.secondary" display="block">
-                      Works for both guest and logged-in modes.
-                    </Typography>
-
-                    {analysisLoading && (
-                      <Box sx={{ mt: 2 }}>
-                        <LinearProgress />
-                      </Box>
-                    )}
 
                     {analysisError && (
                       <Alert severity="error" sx={{ mt: 2 }}>
                         {analysisError}
+
                       </Alert>
                     )}
 
@@ -610,9 +599,9 @@ const Dashboard = () => {
                   Boost your productivity with gamified focus sessions and achievement tracking
                 </Typography>
               </Box>
-              <PomodoroTimer 
-                taskTitle="Focus Session" 
-                learningStyle="visual" 
+              <PomodoroTimer
+                taskTitle="Focus Session"
+                learningStyle="visual"
                 studyTips={["Take regular breaks", "Stay hydrated", "Minimize distractions"]}
               />
             </motion.div>

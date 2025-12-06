@@ -17,27 +17,6 @@ class MLPredictionService:
         self.feature_columns_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../models/lightgbm_feature_columns.json"))
         self.feature_importance_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../models/lightgbm_feature_importance.json"))
         self.feature_columns: List[str] = []
-        self._load_or_create_model()
-    
-    def _load_or_create_model(self):
-        """Load existing model or create a new one if none exists."""
-        try:
-            if os.path.exists(self.model_path):
-                self.model = lgb.Booster(model_file=self.model_path)
-                self.feature_columns = self._load_feature_columns()
-                self.is_trained = True
-            else:
-                self._create_rule_based_model()
-                self.is_trained = False
-        except Exception as e:
-            print(f"Error loading model: {str(e)}")
-            self._create_rule_based_model()
-            self.is_trained = False
-    
-    def _create_rule_based_model(self):
-        """Create a simple rule-based model for initial predictions."""
-        # This is a placeholder for a trained ML model
-        # In production, you would train this on historical data
         self.base_hours = {
             "Assignment": 3.0,
             "Exam": 8.0,
@@ -46,6 +25,27 @@ class MLPredictionService:
             "Reading": 1.5,
             "Lab": 4.0
         }
+        self.use_lightgbm = os.getenv("USE_LIGHTGBM", "false").lower() in {"1", "true", "yes"}
+        self._load_or_create_model()
+    
+    def _load_or_create_model(self):
+        """Load existing model or create a new one if none exists."""
+        try:
+            if self.use_lightgbm and os.path.exists(self.model_path):
+                self.model = lgb.Booster(model_file=self.model_path)
+                self.feature_columns = self._load_feature_columns()
+                self.is_trained = True
+            else:
+                self.model = None
+                self.is_trained = False
+        except Exception as e:
+            print(f"Error loading model: {str(e)}")
+            self.model = None
+            self.is_trained = False
+    
+    def _create_rule_based_model(self):
+        """Placeholder kept for backward compatibility (base hours set in __init__)."""
+        return
     
     async def predict_workload(self, task_data: Dict[str, Any]) -> float:
         """
@@ -60,6 +60,7 @@ class MLPredictionService:
         try:
             if self.is_trained and self.model:
                 return await self._ml_predict(task_data)
+
             return self._rule_based_predict(task_data)
 
         except Exception as e:

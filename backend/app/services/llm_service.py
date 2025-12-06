@@ -6,24 +6,20 @@ natural language processing, and reasoning capabilities.
 """
 
 from typing import Any, Dict, List, Optional
-import os
 import json
-from openai import AsyncOpenAI
 import logging
 
 logger = logging.getLogger(__name__)
+
+from .llm_client import LLMClientManager
+from ..agents.prompt_engineer_agent import prompt_engineer_agent
 
 
 class LLMService:
     """Service for LLM-based analysis and reasoning"""
     
     def __init__(self):
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError("OPENAI_API_KEY environment variable not set")
-        
-        self.client = AsyncOpenAI(api_key=api_key)
-        self.model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")  # Default to cost-effective model
+        self.client_manager = LLMClientManager()
         self.logger = logger
     
     async def analyze_task_workload(
@@ -45,14 +41,17 @@ class LLMService:
         """
         try:
             prompt = self._build_workload_prompt(task_description, task_type, context)
+            prompt = await self._refine_prompt(
+                prompt,
+                target_agent="WorkloadPredictionAgent",
+                goal="Estimate task workload, effort, and stress realistically.",
+            )
             
-            response = await self.client.chat.completions.create(
-                model=self.model,
+            response = await self.client_manager.chat_completion(
                 messages=[
                     {"role": "system", "content": "You are an expert at analyzing task complexity and workload. Provide accurate, realistic estimates."},
                     {"role": "user", "content": prompt}
                 ],
-                response_format={"type": "json_object"},
                 temperature=0.3  # Lower temperature for more consistent predictions
             )
             
@@ -95,14 +94,17 @@ class LLMService:
         """
         try:
             prompt = self._build_prioritization_prompt(tasks, context)
+            prompt = await self._refine_prompt(
+                prompt,
+                target_agent="PrioritizationAgent",
+                goal="Prioritize tasks with clear rationale and balanced workload.",
+            )
             
-            response = await self.client.chat.completions.create(
-                model=self.model,
+            response = await self.client_manager.chat_completion(
                 messages=[
                     {"role": "system", "content": "You are an expert at task prioritization and time management. Help users focus on what matters most."},
                     {"role": "user", "content": prompt}
                 ],
-                response_format={"type": "json_object"},
                 temperature=0.4
             )
             
@@ -130,14 +132,17 @@ class LLMService:
         """
         try:
             prompt = self._build_nl_query_prompt(query, context)
+            prompt = await self._refine_prompt(
+                prompt,
+                target_agent="NaturalLanguageAgent",
+                goal="Interpret the user query accurately and return actionable insights.",
+            )
             
-            response = await self.client.chat.completions.create(
-                model=self.model,
+            response = await self.client_manager.chat_completion(
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant that interprets user queries about tasks and schedules. Extract the intent and parameters."},
                     {"role": "user", "content": prompt}
                 ],
-                response_format={"type": "json_object"},
                 temperature=0.2
             )
             
@@ -166,14 +171,18 @@ class LLMService:
         """
         try:
             prompt = self._build_extraction_prompt(text, source_type)
+            prompt = await self._refine_prompt(
+                prompt,
+                target_agent="TaskParsingAgent",
+                goal="Extract every relevant academic task with complete metadata.",
+                constraints=["Must return valid JSON with a tasks array."],
+            )
             
-            response = await self.client.chat.completions.create(
-                model=self.model,
+            response = await self.client_manager.chat_completion(
                 messages=[
                     {"role": "system", "content": "You are an expert at extracting tasks, deadlines, and requirements from documents. Be thorough and accurate."},
                     {"role": "user", "content": prompt}
                 ],
-                response_format={"type": "json_object"},
                 temperature=0.1  # Very low for consistent extraction
             )
             
@@ -281,6 +290,33 @@ Provide a JSON response with:
   - priority: inferred priority (1-5)
 
 Extract ALL tasks mentioned. Be thorough."""
+
+    async def _refine_prompt(
+        self,
+        prompt: str,
+        target_agent: str,
+        goal: str,
+        constraints: Optional[List[str]] = None,
+    ) -> str:
+        """Route prompt through the Prompt Engineer agent for polishing."""
+        try:
+            response = await prompt_engineer_agent.process(
+                {
+                    "prompt": prompt,
+                    "target_agent": target_agent,
+                    "goal": goal,
+                    "constraints": constraints or [],
+                },
+                context=None,
+            )
+            improved = response.data.get("improved_prompt")
+            if improved:
+                return improved
+        except Exception as exc:  # pragma: no cover - defensive
+            self.logger.warning(
+                "Prompt refinement failed for %s: %s", target_agent, exc
+            )
+        return prompt
 
 
 # Create singleton instance

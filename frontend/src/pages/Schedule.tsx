@@ -19,11 +19,8 @@ import {
 import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
-  AutoAwesome as AutoAwesomeIcon,
 } from '@mui/icons-material';
 import { fetchAllTasks } from '../utils/taskStorage';
-import { agentService } from '../utils/agentService';
-
 interface Task {
   id: string;
   title: string;
@@ -38,19 +35,6 @@ interface Task {
   ai_insights?: any;
 }
 
-interface OptimizedSchedule {
-  schedule: {
-    date: string;
-    tasks: Task[];
-    total_hours: number;
-    stress_level: string;
-    warnings: string[];
-  }[];
-  overall_stress: string;
-  burnout_warnings: string[];
-  optimization_notes: string[];
-}
-
 const Schedule: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
@@ -58,9 +42,6 @@ const Schedule: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedDayTasks, setSelectedDayTasks] = useState<Task[]>([]);
-  const [optimizedSchedule, setOptimizedSchedule] = useState<OptimizedSchedule | null>(null);
-  const [isOptimizing, setIsOptimizing] = useState(false);
-  const [showOptimized, setShowOptimized] = useState(false);
 
   useEffect(() => {
     fetchTasks();
@@ -76,36 +57,6 @@ const Schedule: React.FC = () => {
       setError(err instanceof Error ? err.message : 'Failed to load tasks');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleOptimizeSchedule = async () => {
-    const pendingTasks = tasks.filter(task => task.status !== 'completed');
-    if (pendingTasks.length === 0) {
-      setError('No pending tasks to optimize');
-      return;
-    }
-
-    setIsOptimizing(true);
-    setError(null);
-    
-    try {
-      const userId = localStorage.getItem('access_token') ? 'registered' : 'guest';
-      const startDate = new Date();
-      const scheduleRequest = {
-        tasks: pendingTasks,
-        start_date: startDate.toISOString().split('T')[0],
-        days: 14, // Optimize for 2 weeks
-        user_id: userId,
-      };
-
-      const optimized = await agentService.generateSchedule(scheduleRequest);
-      setOptimizedSchedule(optimized);
-      setShowOptimized(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to optimize schedule');
-    } finally {
-      setIsOptimizing(false);
     }
   };
 
@@ -259,25 +210,12 @@ const Schedule: React.FC = () => {
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Box sx={{ mb: 6 }} className="animate-fade-in">
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-          <Box>
-            <Typography variant="h2" component="h1" sx={{ mb: 1 }}>
-              Calendar
-            </Typography>
-            <Typography variant="body1" color="textSecondary">
-              View your upcoming deadlines and study sessions.
-            </Typography>
-          </Box>
-          <Button
-            variant="contained"
-            startIcon={isOptimizing ? <CircularProgress size={16} /> : <AutoAwesomeIcon />}
-            onClick={handleOptimizeSchedule}
-            disabled={isOptimizing || tasks.filter(t => t.status !== 'completed').length === 0}
-            sx={{ minWidth: '200px' }}
-          >
-            {isOptimizing ? 'Optimizing...' : 'Optimize Schedule'}
-          </Button>
-        </Box>
+        <Typography variant="h2" component="h1" sx={{ mb: 1 }}>
+          Calendar
+        </Typography>
+        <Typography variant="body1" color="textSecondary">
+          View your upcoming deadlines and study sessions.
+        </Typography>
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 3, borderRadius: '16px' }}>{error}</Alert>}
@@ -359,119 +297,6 @@ const Schedule: React.FC = () => {
           ))}
         </Box>
       </Paper>
-
-      {/* Optimized Schedule */}
-      {optimizedSchedule && showOptimized && (
-        <Paper className="bento-card animate-fade-in delay-400" sx={{ p: 4, mb: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              AI-Optimized Study Schedule
-            </Typography>
-            <Button variant="text" onClick={() => setShowOptimized(false)}>
-              Hide
-            </Button>
-          </Box>
-
-          {/* Overall Stress Level */}
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-              Overall Stress Level: 
-              <Chip 
-                label={optimizedSchedule.overall_stress} 
-                size="small"
-                color={
-                  optimizedSchedule.overall_stress === 'high' ? 'error' :
-                  optimizedSchedule.overall_stress === 'medium' ? 'warning' : 'success'
-                }
-                sx={{ ml: 1 }}
-              />
-            </Typography>
-          </Box>
-
-          {/* Burnout Warnings */}
-          {optimizedSchedule.burnout_warnings && optimizedSchedule.burnout_warnings.length > 0 && (
-            <Alert severity="warning" sx={{ mb: 3, borderRadius: '16px' }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                Burnout Warnings:
-              </Typography>
-              {optimizedSchedule.burnout_warnings.map((warning, index) => (
-                <Typography key={index} variant="body2" sx={{ mb: 0.5 }}>
-                  • {warning}
-                </Typography>
-              ))}
-            </Alert>
-          )}
-
-          {/* Optimization Notes */}
-          {optimizedSchedule.optimization_notes && optimizedSchedule.optimization_notes.length > 0 && (
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                AI Recommendations:
-              </Typography>
-              {optimizedSchedule.optimization_notes.map((note, index) => (
-                <Typography key={index} variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
-                  • {note}
-                </Typography>
-              ))}
-            </Box>
-          )}
-
-          {/* Daily Schedule */}
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
-            Daily Schedule:
-          </Typography>
-          <Grid container spacing={2}>
-            {optimizedSchedule.schedule.map((day, index) => (
-              <Grid item xs={12} md={6} key={index}>
-                <Card sx={{ 
-                  p: 2, 
-                  border: day.warnings.length > 0 ? '1px solid #ff9800' : '1px solid #e0e0e0',
-                  bgcolor: day.stress_level === 'high' ? '#fff3e0' : 
-                           day.stress_level === 'medium' ? '#f5f5f5' : '#ffffff'
-                }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                      {new Date(day.date).toLocaleDateString()}
-                    </Typography>
-                    <Chip 
-                      label={`${day.total_hours}h`} 
-                      size="small" 
-                      color={day.total_hours > 8 ? 'error' : day.total_hours > 4 ? 'warning' : 'success'}
-                    />
-                  </Box>
-                  
-                  {day.tasks.length > 0 ? (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      {day.tasks.map((task) => (
-                        <Box key={task.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                            {task.title}
-                          </Typography>
-                          <Chip 
-                            label={`${task.predicted_hours?.toFixed(1)}h`} 
-                            size="small" 
-                            variant="outlined"
-                          />
-                        </Box>
-                      ))}
-                    </Box>
-                  ) : (
-                    <Typography variant="body2" color="textSecondary">
-                      No tasks scheduled
-                    </Typography>
-                  )}
-
-                  {day.warnings.length > 0 && (
-                    <Alert severity="warning" sx={{ mt: 1, py: 0.5 }}>
-                      {day.warnings[0]}
-                    </Alert>
-                  )}
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Paper>
-      )}
 
 
       {/* Day Tasks Modal */}

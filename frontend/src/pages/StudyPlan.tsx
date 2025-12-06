@@ -29,6 +29,7 @@ import {
 import { API_BASE_URL } from '../config/api';
 import { Task } from '../types/task';
 import { fetchAllTasks } from '../utils/taskStorage';
+import { agentService } from '../utils/agentService';
 import PomodoroTimer from '../components/PomodoroTimer';
 
 interface StudySession {
@@ -53,6 +54,19 @@ interface StudyPlan {
   recommendations: string[];
 }
 
+interface OptimizedSchedule {
+  schedule: {
+    date: string;
+    tasks: Task[];
+    total_hours: number;
+    stress_level: string;
+    warnings: string[];
+  }[];
+  overall_stress: string;
+  burnout_warnings: string[];
+  optimization_notes: string[];
+}
+
 const StudyPlan: React.FC = () => {
   const theme = useTheme();
   
@@ -66,6 +80,9 @@ const StudyPlan: React.FC = () => {
   const [selectedSession, setSelectedSession] = useState<StudySession | null>(null);
   const [userLearningStyle, setUserLearningStyle] = useState<string>('visual');
   const [completedSessions, setCompletedSessions] = useState<Set<string>>(new Set());
+  const [optimizedSchedule, setOptimizedSchedule] = useState<OptimizedSchedule | null>(null);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTasks();
@@ -104,6 +121,35 @@ const StudyPlan: React.FC = () => {
       setError('Failed to fetch tasks');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOptimizeSchedule = async () => {
+    const pendingTasks = tasks.filter(task => task.status !== 'completed');
+    if (pendingTasks.length === 0) {
+      setScheduleError('No pending tasks to optimize');
+      return;
+    }
+
+    setIsOptimizing(true);
+    setScheduleError(null);
+
+    try {
+      const userId = localStorage.getItem('access_token') ? 'registered' : 'guest';
+      const startDate = new Date();
+      const scheduleRequest = {
+        tasks: pendingTasks,
+        start_date: startDate.toISOString().split('T')[0],
+        days: Math.max(daysToPlan, 7),
+        user_id: userId,
+      };
+
+      const optimized = await agentService.generateSchedule(scheduleRequest);
+      setOptimizedSchedule(optimized);
+    } catch (err) {
+      setScheduleError(err instanceof Error ? err.message : 'Failed to optimize schedule');
+    } finally {
+      setIsOptimizing(false);
     }
   };
 
@@ -396,6 +442,15 @@ const StudyPlan: React.FC = () => {
               >
                 {generating ? 'Generating...' : 'Generate Plan'}
               </Button>
+              <Button
+                variant="contained"
+                color="secondary"
+                startIcon={isOptimizing ? <CircularProgress size={16} /> : <CalendarIcon />}
+                onClick={handleOptimizeSchedule}
+                disabled={isOptimizing || tasks.filter(t => t.status !== 'completed').length === 0}
+              >
+                {isOptimizing ? 'Optimizing...' : 'Optimize Schedule'}
+              </Button>
             </Box>
           </Grid>
         </Grid>
@@ -409,12 +464,112 @@ const StudyPlan: React.FC = () => {
             No incomplete tasks available for study plan generation. All tasks may be completed or there might be an issue fetching tasks.
           </Alert>
         )}
+        {scheduleError && (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            {scheduleError}
+          </Alert>
+        )}
       </Paper>
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
+      )}
+
+      {/* Macro Plan - Optimized Schedule */}
+      {optimizedSchedule && (
+        <Paper className="bento-card animate-fade-in delay-200" sx={{ p: 4, mb: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h5" sx={{ fontWeight: 600 }}>
+              AI-Optimized Macro Schedule
+            </Typography>
+            <Chip 
+              label={`Overall Stress: ${optimizedSchedule.overall_stress}`}
+              color={
+                optimizedSchedule.overall_stress === 'high' ? 'error' :
+                optimizedSchedule.overall_stress === 'medium' ? 'warning' : 'success'
+              }
+            />
+          </Box>
+
+          {optimizedSchedule.burnout_warnings && optimizedSchedule.burnout_warnings.length > 0 && (
+            <Alert severity="warning" sx={{ mb: 3, borderRadius: '16px' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                Burnout Warnings:
+              </Typography>
+              {optimizedSchedule.burnout_warnings.map((warning, index) => (
+                <Typography key={index} variant="body2" sx={{ mb: 0.5 }}>
+                  • {warning}
+                </Typography>
+              ))}
+            </Alert>
+          )}
+
+          {optimizedSchedule.optimization_notes && optimizedSchedule.optimization_notes.length > 0 && (
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                AI Recommendations:
+              </Typography>
+              {optimizedSchedule.optimization_notes.map((note, index) => (
+                <Typography key={index} variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
+                  • {note}
+                </Typography>
+              ))}
+            </Box>
+          )}
+
+          <Grid container spacing={2}>
+            {optimizedSchedule.schedule.map((day, index) => (
+              <Grid item xs={12} md={6} key={index}>
+                <Card sx={{ 
+                  p: 2, 
+                  border: day.warnings.length > 0 ? '1px solid #ff9800' : '1px solid #e0e0e0',
+                  bgcolor: day.stress_level === 'high' ? '#fff3e0' : 
+                           day.stress_level === 'medium' ? '#f5f5f5' : '#ffffff'
+                }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                      {new Date(day.date).toLocaleDateString()}
+                    </Typography>
+                    <Chip 
+                      label={`${day.total_hours}h`} 
+                      size="small" 
+                      color={day.total_hours > 8 ? 'error' : day.total_hours > 4 ? 'warning' : 'success'}
+                    />
+                  </Box>
+                  
+                  {day.tasks.length > 0 ? (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      {day.tasks.map((task) => (
+                        <Box key={task.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                            {task.title}
+                          </Typography>
+                          <Chip 
+                            label={`${task.predicted_hours?.toFixed(1)}h`} 
+                            size="small" 
+                            variant="outlined"
+                          />
+                        </Box>
+                      ))}
+                    </Box>
+                  ) : (
+                    <Typography variant="body2" color="textSecondary">
+                      No tasks scheduled
+                    </Typography>
+                  )}
+
+                  {day.warnings.length > 0 && (
+                    <Alert severity="warning" sx={{ mt: 1, py: 0.5 }}>
+                      {day.warnings[0]}
+                    </Alert>
+                  )}
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Paper>
       )}
 
       {/* Study Plan Timeline */}

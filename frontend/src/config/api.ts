@@ -1,11 +1,6 @@
 // Centralized API configuration
-export const API_BASE_URL = 'http://localhost:8000';
-//(import.meta as any).env.VITE_API_BASE_URL;
-//  || 'http://localhost:8000';
-
-// Debug: Log the API URL being used
-console.log('API_BASE_URL:', API_BASE_URL);
-console.log('Environment variables:', (import.meta as any).env);
+const envApiBaseUrl = (import.meta as any).env?.VITE_API_BASE_URL;
+export const API_BASE_URL = envApiBaseUrl || 'http://localhost:8000';
 
 // Helper function to build API URLs
 export const buildApiUrl = (endpoint: string): string => {

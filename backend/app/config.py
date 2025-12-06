@@ -3,8 +3,8 @@ from typing import Optional
 import os
 from dotenv import load_dotenv
 
-# Load .env file from project root
-env_path = os.path.join(os.path.dirname(__file__), "../../.env")
+# Load .env file from backend directory
+env_path = os.path.join(os.path.dirname(__file__), "../.env")
 load_dotenv(env_path)
 
 class Settings(BaseSettings):
