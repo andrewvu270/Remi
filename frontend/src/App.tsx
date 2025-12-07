@@ -5,7 +5,8 @@ import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
 import Tasks from './pages/Tasks';
 import Schedule from './pages/Schedule';
-import StudyPlan from './pages/StudyPlan';
+import Sessions from './pages/Sessions';
+import SessionProfile from './pages/SessionProfile';
 import Survey from './pages/Survey';
 import Auth from './pages/Auth';
 import GoogleCallback from './pages/GoogleCallback';
@@ -56,11 +57,20 @@ function App() {
           }
         />
         <Route
-          path="/study-plan"
+          path="/sessions"
           element={
             <ProtectedRoute>
               <Navigation />
-              <StudyPlan />
+              <Sessions />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sessions/:id"
+          element={
+            <ProtectedRoute>
+              <Navigation />
+              <SessionProfile />
             </ProtectedRoute>
           }
         />

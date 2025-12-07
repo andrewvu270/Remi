@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 import random
 from ..database import get_supabase_admin
-import openai
+from ..services.llm_client import LLMClientManager
 import os
 
 router = APIRouter(prefix="/api/survey", tags=["survey"])
@@ -137,10 +137,13 @@ async def survey_status():
 
 @router.post("/generate-ai-samples")
 async def generate_ai_samples(count: int = 5):
-    """Generate synthetic survey data using OpenAI for training"""
+    """Generate synthetic survey data using Groq/OpenAI for training"""
     try:
         if count > 20:
             raise HTTPException(status_code=400, detail="Maximum 20 samples at a time")
+        
+        # Initialize LLM client (Groq-first, OpenAI fallback)
+        llm_client = LLMClientManager()
         
         # Generate diverse task scenarios
         prompt = f"""Generate {count} realistic academic task completion records for training a workload prediction model.
@@ -165,10 +168,8 @@ async def generate_ai_samples(count: int = 5):
         
         Return ONLY the JSON array, no additional text."""
         
-        # Call OpenAI
-        openai.api_key = os.getenv("OPENAI_API_KEY")
-        response = openai.chat.completions.create(
-            model="gpt-4",
+        # Call LLM (Groq first, OpenAI fallback)
+        response = await llm_client.chat_completion(
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that generates realistic academic task data for training machine learning models."},
                 {"role": "user", "content": prompt}
@@ -179,7 +180,7 @@ async def generate_ai_samples(count: int = 5):
         
         # Parse the response
         try:
-            # Extract JSON from OpenAI response
+            # Extract JSON from LLM response
             response_text = response.choices[0].message.content
             
             # Try to find JSON array in response

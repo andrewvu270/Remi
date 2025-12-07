@@ -9,7 +9,7 @@ from .config import settings
 import os
 
 # Import routers
-from .api import courses, tasks, schedule, upload, ml, auth, survey, guest, study_plan, agents, mcp
+from .api import courses, tasks, schedule, upload, ml, auth, survey, guest, study_plan, study_sessions, agents, mcp, sessions, study_habits
 
 # Rate limiter
 limiter = Limiter(
@@ -64,6 +64,9 @@ app.include_router(auth.router, tags=["auth"])
 app.include_router(survey.router, tags=["survey"])
 app.include_router(guest.router, tags=["guest"])
 app.include_router(study_plan.router, prefix="/api/study-plan", tags=["study-plan"])
+app.include_router(study_sessions.router, prefix="/api/study-sessions", tags=["study-sessions"])
+app.include_router(sessions.router, prefix="/api/sessions", tags=["sessions"])
+app.include_router(study_habits.router, prefix="/api/study-habits", tags=["study-habits"])
 
 if __name__ == "__main__":
     import uvicorn
