@@ -68,7 +68,7 @@ app.include_router(study_sessions.router, prefix="/api/study-sessions", tags=["s
 app.include_router(sessions.router, prefix="/api/sessions", tags=["sessions"])
 app.include_router(study_habits.router, prefix="/api/study-habits", tags=["study-habits"])
 
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+# if __name__ == "__main__":
+#     import uvicorn
+#     port = int(os.environ.get("PORT", 8000))
+#     uvicorn.run(app, host="0.0.0.0", port=port)
