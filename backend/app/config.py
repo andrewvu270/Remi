@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: list[str] = [
         "http://localhost:3000",  # Local dev
         "http://localhost:8000",  # Local backend
-        "https://academic-scheduler.andrewvu270.workers.dev",  # Production frontend
+        https://remischeduler.vercel.app/  # Production frontend
     ]
     
     class Config:
