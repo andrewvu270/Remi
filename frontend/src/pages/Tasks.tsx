@@ -26,7 +26,6 @@ import {
 import {
   Add as AddIcon,
   CheckCircle as CheckCircleIcon,
-  Schedule as ScheduleIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { fetchAllTasks, addTask, updateTaskStatus } from '../utils/taskStorage';
@@ -399,7 +398,23 @@ const Tasks: React.FC = () => {
             boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
           }}
         >
-          <ScheduleIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2, opacity: 0.2 }} />
+          <Box
+            component="img"
+            src="/images/study-session-mascot.png"
+            alt="Study Buddy Mascot"
+            sx={{
+              width: 150,
+              height: 150,
+              objectFit: 'contain',
+              mb: 3,
+              opacity: 0.9,
+              animation: 'gentle-float 3s ease-in-out infinite',
+              '@keyframes gentle-float': {
+                '0%, 100%': { transform: 'translateY(0px)' },
+                '50%': { transform: 'translateY(-15px)' }
+              }
+            }}
+          />
           <Typography variant="h5" color="textSecondary" gutterBottom>
             No tasks yet
           </Typography>

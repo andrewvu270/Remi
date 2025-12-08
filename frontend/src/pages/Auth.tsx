@@ -194,11 +194,22 @@ const Auth: React.FC = () => {
     <Container maxWidth="sm" sx={{ py: 8 }}>
       <Paper sx={{ p: 4 }}>
         <Box sx={{ textAlign: 'center', mb: 4 }}>
-          <Typography variant="h3" component="h1" sx={{ fontWeight: 'bold', mb: 2 }}>
-            Academic Scheduler
+          {/* Remi Character */}
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
+            <img
+              src="/images/mascot-icon.png"
+              alt="Remi mascot"
+              style={{ width: '120px', height: '120px', objectFit: 'contain' }}
+            />
+          </Box>
+          <Typography variant="h3" component="h1" sx={{ fontWeight: 'bold', mb: 1 }}>
+            Remi
           </Typography>
-          <Typography variant="body1" color="textSecondary">
-            Manage your tasks and deadlines intelligently
+          <Typography variant="h6" color="primary" sx={{ mb: 1, fontWeight: 500 }}>
+            Your Study Monster
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Sign in to access your personalized academic assistant
           </Typography>
         </Box>
 

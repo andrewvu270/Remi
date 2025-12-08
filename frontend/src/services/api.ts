@@ -23,8 +23,8 @@ api.interceptors.request.use(
     // Handle token expiration
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      // Redirect to login
-      window.location.href = '/login';
+      // Redirect to auth page
+      window.location.href = '/auth';
     }
     return Promise.reject(error);
   }

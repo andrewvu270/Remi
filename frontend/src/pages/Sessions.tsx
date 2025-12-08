@@ -403,20 +403,23 @@ const Sessions: React.FC = () => {
             overflow: 'hidden'
           }}
         >
-          {/* Watermark Icon */}
-          <Typography
+          <Box
+            component="img"
+            src="/images/study-session-mascot.png"
+            alt="Study Buddy Mascot"
             sx={{
-              position: 'absolute',
-              top: -20,
-              right: 20,
-              fontSize: '120px',
-              opacity: 0.03,
-              pointerEvents: 'none',
-              zIndex: 0
+              width: 140,
+              height: 140,
+              objectFit: 'contain',
+              mb: 2,
+              opacity: 0.85,
+              animation: 'gentle-sway 4s ease-in-out infinite',
+              '@keyframes gentle-sway': {
+                '0%, 100%': { transform: 'rotate(-5deg)' },
+                '50%': { transform: 'rotate(5deg)' }
+              }
             }}
-          >
-            ⏱️
-          </Typography>
+          />
           <Typography variant="h6" color="textSecondary">
             No sessions found
           </Typography>

@@ -469,7 +469,7 @@ const Dashboard = () => {
                               Due {new Date(task.due_date || '').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                             </Typography>
                           </Box>
-                          <Button size="small" variant="text" onClick={() => window.location.assign('/schedule')}>
+                          <Button size="small" variant="text" onClick={() => navigate('/schedule')}>
                             View
                           </Button>
                         </Paper>
@@ -479,13 +479,31 @@ const Dashboard = () => {
                     <Box sx={{
                       flex: 1,
                       display: 'flex',
+                      flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
                       bgcolor: '#F8F9FA',
                       borderRadius: '16px',
                       mt: 2,
-                      p: 3
+                      p: 3,
+                      gap: 2
                     }}>
+                      <Box
+                        component="img"
+                        src="/images/study-session-mascot.png"
+                        alt="Study Buddy Mascot"
+                        sx={{
+                          width: 120,
+                          height: 120,
+                          objectFit: 'contain',
+                          opacity: 0.8,
+                          animation: 'gentle-bounce 2s ease-in-out infinite',
+                          '@keyframes gentle-bounce': {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' }
+                          }
+                        }}
+                      />
                       <Typography variant="body2" color="text.secondary" align="center">
                         No upcoming tasks detected yet. Upload a syllabus to let Remi generate a plan!
                       </Typography>

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   Container,
-  Paper,
   Box,
   Typography,
   Button,
@@ -9,7 +8,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
   Chip,
   Alert,
   CircularProgress,
@@ -382,11 +380,7 @@ const SessionProfile: React.FC = () => {
     }
   };
 
-  const getPriorityColor = (priority: number) => {
-    if (priority >= 8) return 'error';
-    if (priority >= 6) return 'warning';
-    return 'success';
-  };
+
 
   if (loading) {
     return (
@@ -437,9 +431,14 @@ const SessionProfile: React.FC = () => {
 
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
-      <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+      <Box sx={{
+        display: 'flex',
+        gap: 3,
+        flexDirection: { xs: 'column', md: 'row' },
+        alignItems: { xs: 'stretch', md: 'flex-start' }
+      }}>
         {/* Session Details */}
-        <Card elevation={2}>
+        <Card elevation={2} sx={{ flex: { xs: 'none', md: 1 }, minWidth: 0 }}>
           <CardContent>
             <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
               Task Information
@@ -597,6 +596,8 @@ const SessionProfile: React.FC = () => {
 
         {/* Timer Section */}
         <Card sx={{
+          flex: { xs: 'none', md: 1 },
+          minWidth: 0,
           bgcolor: session.completed ? '#FFF3E0' : 'background.paper',
           transition: 'background-color 0.3s'
         }}>
