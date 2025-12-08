@@ -56,7 +56,7 @@ async def get_current_user_optional(request: Request) -> Optional[dict]:
     except:
         return None
 
-@router.get("/")
+@router.get("")
 async def list_sessions(
     request: Request,
     status: str = Query("all", regex="^(all|active|completed)$"),

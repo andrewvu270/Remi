@@ -120,9 +120,12 @@ async def load_study_plan(http_request: Request):
             "updated_at": plan_result.data[0]['updated_at']
         }
         
-    except HTTPException:
+    except HTTPException as he:
         raise
     except Exception as e:
+        import traceback
+        print(f"Error loading study plan: {str(e)}")
+        print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Failed to load study plan: {str(e)}")
 
 @router.delete("/clear")
