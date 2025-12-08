@@ -511,7 +511,7 @@ const Tasks: React.FC = () => {
               zIndex: 0
             }}
           >
-            📝
+            <Box component="img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAAsTAAALEwEAmpwYAAAC1klEQVR4nO2WTUhUURTHf+fOvDfO+JFpamoppZhEH0hFbYqgRVBQROCmRYsW7VoEQdCqXRAEbVq0aBFBEATRJqIPiAqiMMrU1MnRcXTmnXvucN/TmUZnxnfHaOGiA4fLvZxz//+59557LocVLllkCxERMSIm9v+LiIiRZVlWRMRIskRExIiIGBER83+LiIiYWJaliIiYWJaliIiYWJaliIiYWJaliIiYWJaliIiYWJaliIiYWJaliIiYWJaliIiYWJaliIiYWPF/4nzm+dJl14uImBkRETPLsoqIiJllWUVEzCzLKiJiZllWEREzy7KKiJhZllVExMyyrCIiZpZlFRExsyxr2Yi4+fFLp2VZxUy8gYiZZVnFRLyBiJllWcVEvIGImWVZxUS8gYiZZVnFRLyBiJllWcVEvIGImWVZxUS8gYiZZVnFRLyBiJllWcVEvIGImWVZxUS8gYiZZVnFRLyBiJllWcVEvIGImWVZxUS8gYiZZVnFRLyBiJllWcVEvIGImWVZxUS8gYiZZVnFRLyBiJllWcVEvIGImWVZxUR8QFxE3Hz0ufPGuzepwYlJrl+/zsTEROrdcbGmpiZt7949rF+/ntbWVurq6li9ejXV1dVUVVVRWVlJRUUF5eXllJWVUVpaSkpKCklJSSQmJhIfH09cXByxsbHExMTwK8FLjiGxkUhc6P9/ERERE7u8pT1WULaKtavLqZv/7K13n+1t7+1rW7tmFfOFPG+/fvP13buPLxw7cWrH3LvXKy6eP9Pa1rbnnvhO0uIT0BQVGpOX8aRaWLoaeACqHAUHAbQPmgKTBtX9+OffF/v7/lzXvxdc/NDV/eDj58+Xbz1uL6fQaRSOv7PxvJ3x/4DH4I8Af1kHsUx7cXFxIiaWiIiJJSJiYl2+dPG4pqhSRMREQVVkNhM/UoSIiIiIiIiIiIiIiIiIyK/FP6E5O/lY8oZJAAAAAElFTkSuQmCC" alt="Tasks" sx={{ width: 20, height: 20, display: 'inline-block', verticalAlign: 'middle' }} />
           </Typography>
           <TableContainer>
             <Table>

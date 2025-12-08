@@ -1093,7 +1093,7 @@ const Schedule: React.FC = () => {
             Calendar Items
           </Typography>
           <Typography variant="body2" color="textSecondary" sx={{ fontStyle: 'italic' }}>
-            💡 Double-click any day to add a session
+            <Box component="img" src="/images/lightbulb-icon.png" alt="Tip" sx={{ width: 20, height: 20, display: 'inline-block', verticalAlign: 'middle', mr: 0.5 }} /> Double-click any day to add a session
           </Typography>
         </Box>
 

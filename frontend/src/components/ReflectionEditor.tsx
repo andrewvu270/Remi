@@ -38,14 +38,14 @@ const ReflectionEditor: React.FC<ReflectionEditorProps> = ({
     what_was_challenging: initialValue?.what_was_challenging || '',
     what_to_improve: initialValue?.what_to_improve || ''
   });
-  
+
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Auto-save to localStorage
   useEffect(() => {
     const autoSaveKey = `reflection_draft_${sessionId}`;
     const savedDraft = localStorage.getItem(autoSaveKey);
-    
+
     if (savedDraft && !initialValue) {
       try {
         const parsed = JSON.parse(savedDraft);
@@ -64,7 +64,7 @@ const ReflectionEditor: React.FC<ReflectionEditorProps> = ({
       const timer = setTimeout(() => {
         localStorage.setItem(autoSaveKey, JSON.stringify(reflection));
       }, 30000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [reflection, hasUnsavedChanges, sessionId]);
@@ -77,7 +77,7 @@ const ReflectionEditor: React.FC<ReflectionEditorProps> = ({
   const handleSave = () => {
     onSave(reflection);
     setHasUnsavedChanges(false);
-    
+
     // Clear draft from localStorage
     const autoSaveKey = `reflection_draft_${sessionId}`;
     localStorage.removeItem(autoSaveKey);
@@ -113,20 +113,20 @@ const ReflectionEditor: React.FC<ReflectionEditorProps> = ({
         <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
           Take a moment to reflect on your study session. This helps improve future sessions.
         </Typography>
-        
+
         <Box sx={{ mb: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
             <Typography variant="body2">Reflection Completeness</Typography>
             <Typography variant="body2">{Math.round(completionScore)}%</Typography>
           </Box>
-          <LinearProgress 
-            variant="determinate" 
-            value={completionScore} 
+          <LinearProgress
+            variant="determinate"
+            value={completionScore}
             sx={{ height: 6, borderRadius: 3 }}
             color={completionScore > 70 ? 'success' : completionScore > 30 ? 'warning' : 'error'}
           />
         </Box>
-        
+
         {totalWords > 0 && (
           <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
             <Chip label={`${totalWords} words`} size="small" />
@@ -156,7 +156,7 @@ const ReflectionEditor: React.FC<ReflectionEditorProps> = ({
 
         <Box>
           <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600, color: 'warning.main' }}>
-            🤔 What was challenging?
+            <Box component="img" src="/images/thinking-icon.png" alt="Thinking" sx={{ width: 20, height: 20, display: 'inline-block', verticalAlign: 'middle', mr: 0.5 }} /> What was challenging?
           </Typography>
           <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
             {guidedPrompts.what_was_challenging[Math.floor(Math.random() * guidedPrompts.what_was_challenging.length)]}
@@ -175,7 +175,7 @@ const ReflectionEditor: React.FC<ReflectionEditorProps> = ({
 
         <Box>
           <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600, color: 'info.main' }}>
-            🎯 What would you improve?
+            <Box component="img" src="/images/goal-icon.png" alt="Goal" sx={{ width: 20, height: 20, display: 'inline-block', verticalAlign: 'middle', mr: 0.5 }} /> What would you improve?
           </Typography>
           <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
             {guidedPrompts.what_to_improve[Math.floor(Math.random() * guidedPrompts.what_to_improve.length)]}
@@ -194,7 +194,7 @@ const ReflectionEditor: React.FC<ReflectionEditorProps> = ({
 
         <Box>
           <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
-            📝 Additional thoughts (optional)
+            <Box component="img" src="/images/notepad-icon.png" alt="Reflection" sx={{ width: 20, height: 20, display: 'inline-block', verticalAlign: 'middle', mr: 0.5 }} /> Additional thoughts (optional)
           </Typography>
           <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
             Any other observations, feelings, or notes about this study session?
@@ -228,7 +228,7 @@ const ReflectionEditor: React.FC<ReflectionEditorProps> = ({
           💡 Reflection Tips:
         </Typography>
         <Typography variant="body2" color="textSecondary">
-          • Be specific about what you learned • Identify concrete challenges • 
+          • Be specific about what you learned • Identify concrete challenges •
           Suggest actionable improvements • Aim for 50+ words total for best insights
         </Typography>
       </Box>

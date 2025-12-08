@@ -437,7 +437,7 @@ const Dashboard = () => {
                         Remi analyzes your syllabus and automatically builds a balanced study plan for you.
                       </Typography>
                     </Box>
-                    <Typography variant="h3" sx={{ opacity: 0.1 }}>📅</Typography>
+
                   </Box>
 
                   {previewTasks.length > 0 ? (

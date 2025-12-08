@@ -98,7 +98,7 @@ const LandingPage = () => {
                             border: '1px solid rgba(245, 158, 11, 0.2)',
                             boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
                         }}>
-                            New: Meet Remi! 👾
+                            New: Meet Remi! <Box component="img" src="/images/mascot-icon.png" alt="Remi" sx={{ width: 20, height: 20, display: 'inline-block', verticalAlign: 'middle', ml: 0.5 }} />
                         </Box>
                         <Typography variant="h1" sx={{
                             fontSize: { xs: '2.5rem', md: '3.5rem' },
@@ -171,7 +171,7 @@ const LandingPage = () => {
                                 }}
                             >
                                 <Typography variant="subtitle2" fontWeight="800" color="secondary.main" sx={{ mb: 0.5 }}>
-                                    I'm Reminder Monster! 👾
+                                    I'm Reminder Monster! <Box component="img" src="/images/mascot-icon.png" alt="Remi" sx={{ width: 20, height: 20, display: 'inline-block', verticalAlign: 'middle', ml: 0.5 }} />
                                 </Typography>
                                 <Typography variant="caption" sx={{ lineHeight: 1.2, display: 'block', fontWeight: 500, color: 'text.secondary' }}>
                                     I'll make sure you COMPLETE your sessions! Rawr!
@@ -203,7 +203,7 @@ const LandingPage = () => {
                                         Remi analyzes your syllabus and automatically builds a balanced study plan for you.
                                     </Typography>
                                 </Box>
-                                <Typography variant="h1" sx={{ opacity: 0.1 }}>📅</Typography>
+
                             </Box>
                         </Box>
                         <Box sx={{

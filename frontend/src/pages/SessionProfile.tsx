@@ -719,7 +719,7 @@ const SessionProfile: React.FC = () => {
             }}
             onClick={() => setReflectionExpanded(!reflectionExpanded)}
           >
-            <Typography variant="h6">📝 Session Reflection</Typography>
+            <Typography variant="h6"><Box component="img" src="/images/notepad-icon.png" alt="Reflection" sx={{ width: 20, height: 20, display: 'inline-block', verticalAlign: 'middle', mr: 0.5 }} /> Session Reflection</Typography>
             {reflectionExpanded ? <ExpandLess /> : <ExpandMore />}
           </Box>
 
