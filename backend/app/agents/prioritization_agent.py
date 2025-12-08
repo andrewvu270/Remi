@@ -19,7 +19,7 @@ class PrioritizationAgent(BaseAgent):
     
     def __init__(self):
         super().__init__("PrioritizationAgent")
-        self.llm = llm_service
+        # Do not bind llm_service at init; use module-level reference in methods
     
     async def process(
         self, 
@@ -47,7 +47,7 @@ class PrioritizationAgent(BaseAgent):
             )
         
         # Use LLM for intelligent prioritization
-        llm_result = await self.llm.prioritize_tasks(tasks, context)
+        llm_result = await llm_service.prioritize_tasks(tasks, context)
         
         # Calculate rule-based priorities as backup
         rule_based = self._rule_based_prioritization(tasks)

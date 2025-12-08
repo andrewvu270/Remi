@@ -18,7 +18,7 @@ class TaskParsingAgent(BaseAgent):
     
     def __init__(self):
         super().__init__("TaskParsingAgent")
-        self.llm = llm_service
+        # Do not bind llm_service at init; use the module-level reference in process to allow test patching
     
     async def process(
         self, 
@@ -46,7 +46,7 @@ class TaskParsingAgent(BaseAgent):
             )
         
         # Use LLM to extract tasks
-        tasks = await self.llm.extract_tasks_from_text(text, source_type)
+        tasks = await llm_service.extract_tasks_from_text(text, source_type)
         
         # Enrich tasks with additional metadata
         enriched_tasks = []

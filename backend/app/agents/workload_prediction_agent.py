@@ -19,7 +19,7 @@ class WorkloadPredictionAgent(BaseAgent):
     
     def __init__(self):
         super().__init__("WorkloadPredictionAgent")
-        self.llm = llm_service
+        # Do not bind llm_service at init; use module-level reference in methods
         self.ml = ml_service
     
     async def process(
@@ -85,9 +85,9 @@ class WorkloadPredictionAgent(BaseAgent):
         task_description = task.get("description", task.get("title", ""))
         task_type = task.get("task_type", "Assignment")
         
-        analysis = await self.llm.analyze_task_workload(
-            task_description, 
-            task_type, 
+        analysis = await llm_service.analyze_task_workload(
+            task_description,
+            task_type,
             context
         )
         
