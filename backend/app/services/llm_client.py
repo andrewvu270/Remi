@@ -42,8 +42,9 @@ class LLMClientManager:
             self._openai_client = AsyncOpenAI(api_key=openai_key)
 
         if not self._groq_client and not self._openai_client:
-            raise ValueError(
-                "No LLM providers configured. Set GROQ_API_KEY and/or OPENAI_API_KEY."
+            self.logger.warning(
+                "No LLM providers configured. Set GROQ_API_KEY and/or OPENAI_API_KEY. "
+                "Agents will fail if they attempt to generate text."
             )
 
     async def chat_completion(
