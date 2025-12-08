@@ -11,6 +11,19 @@ class TaskBase(BaseModel):
 
 class TaskCreate(TaskBase):
     course_id: str
+    @field_validator('title', 'task_type', 'course_id')
+    @classmethod
+    def validate_required_fields(cls, v, info):
+        if not v or (isinstance(v, str) and not v.strip()):
+            raise ValueError(f'{info.field_name} is required and cannot be empty')
+        return v
+    
+    @field_validator('due_date')
+    @classmethod
+    def validate_due_date(cls, v):
+        if not v:
+            raise ValueError('due_date is required')
+        return v
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
