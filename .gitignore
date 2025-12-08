@@ -73,3 +73,5 @@ backend/models/*.txt
 
 # Documentation
 docs/
+
+.kiro

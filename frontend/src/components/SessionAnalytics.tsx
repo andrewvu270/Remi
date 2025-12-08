@@ -194,7 +194,7 @@ const SessionAnalytics: React.FC<AnalyticsProps> = ({ timeRange = 'week' }) => {
             </CardContent>
           </Card>
         </Grid>
-        
+
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -208,7 +208,7 @@ const SessionAnalytics: React.FC<AnalyticsProps> = ({ timeRange = 'week' }) => {
             </CardContent>
           </Card>
         </Grid>
-        
+
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -222,7 +222,7 @@ const SessionAnalytics: React.FC<AnalyticsProps> = ({ timeRange = 'week' }) => {
             </CardContent>
           </Card>
         </Grid>
-        
+
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
@@ -244,14 +244,14 @@ const SessionAnalytics: React.FC<AnalyticsProps> = ({ timeRange = 'week' }) => {
           <Paper sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
               <Psychology sx={{ mr: 1, color: 'primary.main' }} />
-              <Typography variant="h6">AI-Powered Insights</Typography>
-              <Chip 
-                label={`Powered by ${data.ai_analysis.model}`} 
-                size="small" 
-                sx={{ ml: 2 }} 
+              <Typography variant="h6">🦉 Remi Insights</Typography>
+              <Chip
+                label={`Powered by ${data.ai_analysis.model}`}
+                size="small"
+                sx={{ ml: 2 }}
               />
             </Box>
-            
+
             {data.ai_analysis.insights.length > 0 ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {data.ai_analysis.insights.map((insight, index) => (
@@ -266,7 +266,7 @@ const SessionAnalytics: React.FC<AnalyticsProps> = ({ timeRange = 'week' }) => {
                             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                               {insight.title}
                             </Typography>
-                            <Chip 
+                            <Chip
                               label={`${(insight.confidence * 100).toFixed(0)}% confidence`}
                               size="small"
                               color={getInsightColor(insight.type) as any}
@@ -293,7 +293,7 @@ const SessionAnalytics: React.FC<AnalyticsProps> = ({ timeRange = 'week' }) => {
               </Box>
             ) : (
               <Alert severity="info">
-                Complete more study sessions to unlock AI-powered insights!
+                Complete more study sessions to unlock personalized insights from your Study Buddy!
               </Alert>
             )}
           </Paper>
@@ -310,29 +310,29 @@ const SessionAnalytics: React.FC<AnalyticsProps> = ({ timeRange = 'week' }) => {
                   {formatTimeOfDay(data.ai_analysis.predictions.optimal_study_time)}
                 </Typography>
               </Box>
-              
+
               <Box>
                 <Typography variant="body2" color="textSecondary">Recommended Session Length</Typography>
                 <Typography variant="body1" sx={{ fontWeight: 500 }}>
                   {data.ai_analysis.predictions.recommended_session_length}h
                 </Typography>
               </Box>
-              
+
               <Box>
                 <Typography variant="body2" color="textSecondary">Weekly Capacity</Typography>
                 <Typography variant="body1" sx={{ fontWeight: 500 }}>
                   {data.ai_analysis.predictions.estimated_weekly_capacity}h
                 </Typography>
               </Box>
-              
+
               <Box>
                 <Typography variant="body2" color="textSecondary">Stress Trend</Typography>
-                <Chip 
+                <Chip
                   label={data.ai_analysis.predictions.stress_level_trend}
                   size="small"
                   color={
                     data.ai_analysis.predictions.stress_level_trend === 'decreasing' ? 'success' :
-                    data.ai_analysis.predictions.stress_level_trend === 'increasing' ? 'error' : 'default'
+                      data.ai_analysis.predictions.stress_level_trend === 'increasing' ? 'error' : 'default'
                   }
                 />
               </Box>
@@ -351,8 +351,8 @@ const SessionAnalytics: React.FC<AnalyticsProps> = ({ timeRange = 'week' }) => {
                       {(effectiveness * 100).toFixed(0)}%
                     </Typography>
                   </Box>
-                  <LinearProgress 
-                    variant="determinate" 
+                  <LinearProgress
+                    variant="determinate"
                     value={Math.min(100, effectiveness * 100)}
                     color={effectiveness > 1 ? 'success' : effectiveness > 0.8 ? 'warning' : 'error'}
                     sx={{ height: 6, borderRadius: 3 }}

@@ -72,6 +72,7 @@ async def save_study_plan(
                     "user_id": user['sub'],
                     "task_id": session.get('task_id', ''),
                     "task_title": session.get('task_title'),
+                    "course_code": session.get('course_code'),
                     "day": session.get('day'),
                     "priority": session.get('priority'),
                     "estimated_hours": session.get('estimated_hours'),

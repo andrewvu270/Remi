@@ -17,6 +17,8 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import {
   ChevronLeft as ChevronLeftIcon,
@@ -26,6 +28,8 @@ import {
 } from '@mui/icons-material';
 import { fetchAllTasks } from '../utils/taskStorage';
 import { API_BASE_URL } from '../config/api';
+import { notificationService } from '../services/notificationService';
+
 
 interface Task {
   id: string;
@@ -45,6 +49,7 @@ interface StudySession {
   id: string;
   task_id: string;
   task_title: string;
+  course_code?: string;
   start_time?: string;  // Optional now - for flexibility
   end_time?: string;    // Optional now - for flexibility
   day: string;
@@ -64,7 +69,13 @@ interface StudyPlan {
 }
 
 const Schedule: React.FC = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
+
+
+
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +101,7 @@ const Schedule: React.FC = () => {
   const [selectedDateForAdd, setSelectedDateForAdd] = useState<Date | null>(null);
   const [newSessionData, setNewSessionData] = useState({
     task_title: '',
+    course_code: '',
     estimated_hours: 2,
     priority: 5
   });
@@ -98,15 +110,42 @@ const Schedule: React.FC = () => {
     // Check authentication status
     const token = localStorage.getItem('access_token');
     setIsAuthenticated(!!token);
-    
+
     fetchTasks();
     loadStudyPlan();
-    
+
     // Only sync from cloud if authenticated
     if (token) {
       syncFromCloud();
     }
   }, []);
+
+  // Schedule notifications for today's sessions
+  useEffect(() => {
+    if (studyPlan && studyPlan.sessions) {
+      const reminderMinutes = parseInt(localStorage.getItem('reminderMinutes') || '15');
+
+      // Schedule reminders for today's sessions
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      studyPlan.sessions.forEach(session => {
+        const sessionDate = new Date(session.day);
+        sessionDate.setHours(9, 0, 0, 0); // Default to 9 AM if no time specified
+
+        // Only schedule for today or future sessions
+        if (sessionDate >= today && !session.completed) {
+          notificationService.scheduleReminder({
+            sessionId: session.id,
+            taskTitle: session.task_title,
+            courseCode: session.course_code,
+            scheduledTime: sessionDate,
+            estimatedHours: session.estimated_hours
+          }, reminderMinutes);
+        }
+      });
+    }
+  }, [studyPlan]);
 
   const loadStudyPlan = () => {
     try {
@@ -114,7 +153,7 @@ const Schedule: React.FC = () => {
       if (saved) {
         const parsedPlan = JSON.parse(saved);
         setStudyPlan(parsedPlan);
-        
+
         // Load completed sessions
         const savedCompleted = localStorage.getItem('completedSessions');
         if (savedCompleted) {
@@ -133,7 +172,7 @@ const Schedule: React.FC = () => {
       console.log('Not authenticated - skipping cloud sync');
       return;
     }
-    
+
     if (!studyPlan) {
       console.log('No study plan to sync');
       return;
@@ -208,20 +247,20 @@ const Schedule: React.FC = () => {
           // Check if local data is newer
           const localTimestamp = localStorage.getItem('studyPlanTimestamp');
           const cloudTimestamp = new Date(data.updated_at).getTime();
-          
+
           if (!localTimestamp || cloudTimestamp > parseInt(localTimestamp)) {
             // Cloud is newer, use cloud data
             setStudyPlan(cloudPlan);
             localStorage.setItem('studyPlan', JSON.stringify(cloudPlan));
             localStorage.setItem('studyPlanTimestamp', cloudTimestamp.toString());
-            
+
             // Update completed sessions
             const completed = new Set(
               cloudPlan.sessions.filter(s => s.completed).map(s => s.id)
             );
             setCompletedSessions(completed);
             localStorage.setItem('completedSessions', JSON.stringify(Array.from(completed)));
-            
+
             setSyncStatus('✓ Loaded from cloud');
           } else {
             setSyncStatus('✓ Local data is current');
@@ -262,20 +301,20 @@ const Schedule: React.FC = () => {
 
   const getStudySessionsForDate = (date: Date): StudySession[] => {
     if (!studyPlan) return [];
-    
+
     return studyPlan.sessions.filter(session => {
       const sessionDate = new Date(session.day);
       if (isNaN(sessionDate.getTime())) {
         console.warn('Invalid session date:', session.day);
         return false;
       }
-      
+
       const matches = (
         sessionDate.getFullYear() === date.getFullYear() &&
         sessionDate.getMonth() === date.getMonth() &&
         sessionDate.getDate() === date.getDate()
       );
-      
+
       return matches;
     });
   };
@@ -310,12 +349,11 @@ const Schedule: React.FC = () => {
 
   const handleDayClick = (date: Date) => {
     const dayTasks = getTasksForDate(date);
-    const daySessions = getStudySessionsForDate(date);
-    
-    if (dayTasks.length > 0 || daySessions.length > 0) {
-      setSelectedDate(date);
-      setSelectedDayTasks(dayTasks);
-    }
+    // const daySessions = getStudySessionsForDate(date); // Not needed for selection logic anymore
+
+    // Always allow selection so user can see empty state or add new items
+    setSelectedDate(date);
+    setSelectedDayTasks(dayTasks);
   };
 
   const handleCloseModal = () => {
@@ -325,20 +363,58 @@ const Schedule: React.FC = () => {
   const toggleSessionCompletion = (sessionId: string) => {
     setCompletedSessions(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(sessionId)) {
-        newSet.delete(sessionId);
-      } else {
+      const isCompleting = !newSet.has(sessionId);
+
+      if (isCompleting) {
         newSet.add(sessionId);
+      } else {
+        newSet.delete(sessionId);
       }
-      
+
+      // Update studyPlan in localStorage
+      setStudyPlan(currentPlan => {
+        if (!currentPlan) return null;
+
+        const updatedSessions = currentPlan.sessions.map(s => {
+          if (s.id === sessionId) {
+            if (isCompleting) {
+              // Marking as complete - use estimated hours if no actual hours
+              return {
+                ...s,
+                completed: true,
+                completed_at: new Date().toISOString(),
+                actual_hours: s.actual_hours || s.estimated_hours
+              };
+            } else {
+              // Marking as incomplete - reset all completion data
+              return {
+                ...s,
+                completed: false,
+                completed_at: undefined,
+                actual_hours: undefined,
+                reflection: undefined,
+                pomodoro_count: 0
+              };
+            }
+          }
+          return s;
+        });
+
+        const updatedPlan = { ...currentPlan, sessions: updatedSessions };
+        localStorage.setItem('studyPlan', JSON.stringify(updatedPlan));
+        localStorage.setItem('studyPlanTimestamp', Date.now().toString());
+
+        return updatedPlan;
+      });
+
       // Save to localStorage
       localStorage.setItem('completedSessions', JSON.stringify(Array.from(newSet)));
-      
+
       // Auto-sync to cloud only if authenticated
       if (isAuthenticated) {
         setTimeout(() => syncToCloud(), 500);
       }
-      
+
       return newSet;
     });
   };
@@ -349,9 +425,10 @@ const Schedule: React.FC = () => {
     }
 
     const newSession: StudySession = {
-      id: `session-${Date.now()}`,
+      id: `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       task_id: '',
       task_title: newSessionData.task_title,
+      course_code: newSessionData.course_code || undefined,
       day: selectedDateForAdd.toISOString().split('T')[0],
       priority: newSessionData.priority,
       estimated_hours: newSessionData.estimated_hours,
@@ -382,7 +459,7 @@ const Schedule: React.FC = () => {
         sessions: [...prev.sessions, newSession],
         total_hours: prev.total_hours + newSessionData.estimated_hours
       };
-      
+
       localStorage.setItem('studyPlan', JSON.stringify(updatedPlan));
       localStorage.setItem('studyPlanTimestamp', Date.now().toString());
       if (isAuthenticated) {
@@ -394,6 +471,7 @@ const Schedule: React.FC = () => {
     // Reset form
     setNewSessionData({
       task_title: '',
+      course_code: '',
       estimated_hours: 2,
       priority: 5
     });
@@ -439,11 +517,11 @@ const Schedule: React.FC = () => {
       setError('No tasks available for study plan generation');
       return;
     }
-    
+
     setGenerating(true);
     setError(null);
     setPlanWarning(null);
-    
+
     try {
       const incompleteTasks = tasks.filter(task => task.status !== 'completed');
       const requestData = {
@@ -459,7 +537,7 @@ const Schedule: React.FC = () => {
         study_hours_per_day: studyHours,
         start_date: startDate
       };
-      
+
       const response = await fetch(`${API_BASE_URL}/api/study-plan/generate`, {
         method: 'POST',
         headers: {
@@ -468,13 +546,13 @@ const Schedule: React.FC = () => {
         },
         body: JSON.stringify(requestData)
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       console.log('📅 Backend response:', data);
       console.log('📅 Response keys:', Object.keys(data));
       console.log('📅 Sessions from backend:', data.sessions);
@@ -484,28 +562,39 @@ const Schedule: React.FC = () => {
         console.log('📅 First session from backend:', data.sessions[0]);
       }
       console.log('📅 Sample from plan text:', data.plan.substring(0, 500));
-      
+
       // Check for warnings
       if (data.warning) {
         setPlanWarning(data.warning);
       }
-      
+
       // Use sessions directly from backend if available, otherwise parse
       let parsedPlan: StudyPlan;
       if (data.sessions && Array.isArray(data.sessions)) {
         // Backend now returns structured sessions directly
+        const seenIds = new Set<string>();
+        const baseTimestamp = Date.now();
         parsedPlan = {
-          sessions: data.sessions.map((s: any, idx: number) => ({
-            id: s.id || `session-${idx}`,
-            task_id: s.task_id || '',
-            task_title: s.task_title,
-            start_time: s.start_time || undefined,
-            end_time: s.end_time || undefined,
-            day: s.day,
-            priority: s.priority,
-            estimated_hours: s.estimated_hours,
-            research_tips: s.research_tips || []
-          })),
+          sessions: data.sessions.map((s: any, idx: number) => {
+            let id = s.id || `session-${baseTimestamp}-${idx}-${Math.random().toString(36).substr(2, 9)}`;
+            // Ensure ID is unique
+            if (seenIds.has(id)) {
+              id = `${id}-${Math.random().toString(36).substr(2, 9)}`;
+            }
+            seenIds.add(id);
+
+            return {
+              id,
+              task_id: s.task_id || '',
+              task_title: s.task_title,
+              start_time: s.start_time || undefined,
+              end_time: s.end_time || undefined,
+              day: s.day,
+              priority: s.priority,
+              estimated_hours: s.estimated_hours,
+              research_tips: s.research_tips || []
+            };
+          }),
           total_hours: data.total_hours,
           days_planned: data.days_planned,
           stress_level: data.total_hours > 21 ? 'high' : data.total_hours > 14 ? 'medium' : 'low',
@@ -515,25 +604,25 @@ const Schedule: React.FC = () => {
         // Fallback to parsing markdown (for backward compatibility)
         parsedPlan = parseStudyPlan(data.plan, data.total_hours, data.days_planned);
       }
-      
+
       console.log('📅 Parsed plan:', parsedPlan);
       console.log('📅 Number of sessions:', parsedPlan.sessions.length);
       if (parsedPlan.sessions.length > 0) {
         console.log('📅 First session:', parsedPlan.sessions[0]);
         console.log('📅 First session day:', parsedPlan.sessions[0].day);
       }
-      
+
       setStudyPlan(parsedPlan);
-      
+
       // Save to localStorage
       localStorage.setItem('studyPlan', JSON.stringify(parsedPlan));
       localStorage.setItem('studyPlanTimestamp', Date.now().toString());
-      
+
       // Auto-sync to cloud only if authenticated
       if (isAuthenticated) {
         setTimeout(() => syncToCloud(), 500);
       }
-      
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate study plan');
     } finally {
@@ -545,8 +634,9 @@ const Schedule: React.FC = () => {
     const sessions: StudySession[] = [];
     const lines = planText.split('\n');
     let currentDate = '';
+    const baseTimestamp = Date.now();
     let sessionId = 0;
-    
+
     lines.forEach((line) => {
       const dayMatch = line.match(/## Day \d+: (.+)/);
       if (dayMatch) {
@@ -555,18 +645,18 @@ const Schedule: React.FC = () => {
       }
 
       if (!line.startsWith('-')) return;
-      
+
       const timeMatch = line.match(/\*{0,2}(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})\*{0,2}/);
       if (!timeMatch) return;
-      
+
       const titleMatch = line.match(/\*{0,2}\d{2}:\d{2}\s*-\s*\d{2}:\d{2}\*{0,2}\s+(.+)\s+\(Priority:/);
       if (!titleMatch) return;
-      
+
       const priorityMatch = line.match(/Priority:\s*(\d+)/);
       const durationMatch = line.match(/-\s*([\d.]+)h/);
-      
+
       sessions.push({
-        id: `session-${sessionId++}`,
+        id: `session-${baseTimestamp}-${sessionId++}-${Math.random().toString(36).substr(2, 9)}`,
         task_id: '',
         task_title: titleMatch[1].trim(),
         start_time: timeMatch[1],
@@ -577,20 +667,20 @@ const Schedule: React.FC = () => {
         research_tips: []
       });
     });
-    
+
     const recommendations: string[] = [];
     const summaryMatch = planText.match(/## Summary\n([\s\S]*?)(?=\n\n|$)/);
     if (summaryMatch) {
       const summaryLines = summaryMatch[1].split('\n').filter(line => line.trim().startsWith('-'));
       summaryLines.forEach(line => {
         const tipMatch = line.match(/-\s*(.+)/);
-        if (tipMatch && !tipMatch[1].toLowerCase().includes('total study hours') && 
-            !tipMatch[1].toLowerCase().includes('tasks covered')) {
+        if (tipMatch && !tipMatch[1].toLowerCase().includes('total study hours') &&
+          !tipMatch[1].toLowerCase().includes('tasks covered')) {
           recommendations.push(tipMatch[1].trim());
         }
       });
     }
-    
+
     return {
       sessions,
       total_hours: totalHours,
@@ -612,9 +702,10 @@ const Schedule: React.FC = () => {
           key={`empty-${i}`}
           sx={{
             p: 1,
-            minHeight: 120,
+            minHeight: isMobile ? 60 : 120,
             backgroundColor: '#f5f5f5',
             border: '1px solid #e0e0e0',
+            borderRadius: isMobile ? 1 : 0
           }}
         />
       );
@@ -625,7 +716,7 @@ const Schedule: React.FC = () => {
       const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
       const dayTasks = getTasksForDate(date);
       const daySessions = getStudySessionsForDate(date);
-      
+
       const isToday = date.toDateString() === new Date().toDateString();
       const hasCompletedSessions = daySessions.some(s => completedSessions.has(s.id));
 
@@ -635,8 +726,8 @@ const Schedule: React.FC = () => {
           onClick={() => handleDayClick(date)}
           onDoubleClick={() => openAddSessionDialog(date)}
           sx={{
-            p: 1,
-            minHeight: 120,
+            p: isMobile ? 0.5 : 1,
+            minHeight: isMobile ? 60 : 120,
             border: '1px solid #e0e0e0',
             backgroundColor: isToday
               ? '#e3f2fd'
@@ -659,14 +750,34 @@ const Schedule: React.FC = () => {
           <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
             {day}
           </Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          <Box sx={{ display: 'flex', flexDirection: isMobile ? 'row' : 'column', gap: 0.5, flexWrap: isMobile ? 'wrap' : 'nowrap', justifyContent: isMobile ? 'center' : 'flex-start' }}>
             {/* Show study sessions first */}
-            {daySessions.slice(0, 1).map((session) => {
+            {daySessions.slice(0, isMobile ? 4 : 1).map((session) => {
               const isCompleted = completedSessions.has(session.id);
+
+              if (isMobile) {
+                return (
+                  <Box
+                    key={session.id}
+                    sx={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: '50%',
+                      backgroundColor: isCompleted ? '#9E9E9E' : '#424242',
+                      opacity: isCompleted ? 0.5 : 1
+                    }}
+                  />
+                );
+              }
+
+              const displayText = session.course_code
+                ? `${session.course_code} - ${session.estimated_hours}h`
+                : `${session.task_title.substring(0, 12)} - ${session.estimated_hours}h`;
+
               return (
                 <Chip
                   key={session.id}
-                  label={`${session.estimated_hours}h - ${session.task_title.substring(0, 10)}`}
+                  label={displayText}
                   size="small"
                   sx={{
                     backgroundColor: isCompleted ? '#9E9E9E' : '#424242',
@@ -679,7 +790,7 @@ const Schedule: React.FC = () => {
                       px: 0.5,
                     },
                   }}
-                  onClick={(e) => {
+                  onClick={(e: React.MouseEvent) => {
                     e.stopPropagation();
                     toggleSessionCompletion(session.id);
                   }}
@@ -687,29 +798,49 @@ const Schedule: React.FC = () => {
               );
             })}
             {/* Show tasks */}
-            {dayTasks.slice(0, daySessions.length > 0 ? 1 : 2).map((task) => (
-              <Chip
-                key={task.id}
-                label={task.title.substring(0, 12)}
-                size="small"
-                sx={{
-                  backgroundColor: task.status === 'completed' ? '#4caf50' : getTaskTypeColor(task.task_type),
-                  color: 'white',
-                  fontSize: '0.7rem',
-                  height: 20,
-                  opacity: task.status === 'completed' ? 0.6 : 1,
-                  textDecoration: task.status === 'completed' ? 'line-through' : 'none',
-                  '& .MuiChip-label': {
-                    px: 0.5,
-                  },
-                }}
-              />
-            ))}
-            {(dayTasks.length > (daySessions.length > 0 ? 1 : 2) || daySessions.length > 1) && (
+            {dayTasks.slice(0, isMobile ? 4 : (daySessions.length > 0 ? 1 : 2)).map((task) => {
+              if (isMobile) {
+                return (
+                  <Box
+                    key={task.id}
+                    sx={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: '50%',
+                      backgroundColor: task.status === 'completed' ? '#4caf50' : getTaskTypeColor(task.task_type),
+                      opacity: task.status === 'completed' ? 0.5 : 1
+                    }}
+                  />
+                );
+              }
+
+              return (
+                <Chip
+                  key={task.id}
+                  label={task.title.substring(0, 12)}
+                  size="small"
+                  sx={{
+                    backgroundColor: task.status === 'completed' ? '#4caf50' : getTaskTypeColor(task.task_type),
+                    color: 'white',
+                    fontSize: '0.7rem',
+                    height: 20,
+                    opacity: task.status === 'completed' ? 0.6 : 1,
+                    textDecoration: task.status === 'completed' ? 'line-through' : 'none',
+                    '& .MuiChip-label': {
+                      px: 0.5,
+                    },
+                  }}
+                />
+              );
+            })}
+            {!isMobile && (dayTasks.length > (daySessions.length > 0 ? 1 : 2) || daySessions.length > 1) && (
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                +{(dayTasks.length > (daySessions.length > 0 ? 1 : 2) ? dayTasks.length - (daySessions.length > 0 ? 1 : 2) : 0) + 
+                +{(dayTasks.length > (daySessions.length > 0 ? 1 : 2) ? dayTasks.length - (daySessions.length > 0 ? 1 : 2) : 0) +
                   (daySessions.length > 1 ? daySessions.length - 1 : 0)} more
               </Typography>
+            )}
+            {isMobile && (dayTasks.length + daySessions.length > 8) && (
+              <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#bdbdbd' }} />
             )}
           </Box>
         </Paper>
@@ -743,61 +874,19 @@ const Schedule: React.FC = () => {
 
       {error && <Alert severity="error" sx={{ mb: 3, borderRadius: '16px' }}>{error}</Alert>}
 
-      {/* Month Navigation */}
-      <Paper className="bento-card animate-fade-in delay-100" sx={{ p: 2, mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Button
-          startIcon={<ChevronLeftIcon />}
-          onClick={handlePrevMonth}
-          variant="text"
-          color="inherit"
-        >
-          Previous
-        </Button>
-        <Typography variant="h4" sx={{ fontWeight: 600 }}>
-          {monthName}
-        </Typography>
-        <Button
-          endIcon={<ChevronRightIcon />}
-          onClick={handleNextMonth}
-          variant="text"
-          color="inherit"
-        >
-          Next
-        </Button>
-      </Paper>
-
-      {/* Calendar Grid */}
-      <Paper className="bento-card animate-fade-in delay-200" sx={{ p: 3, mb: 4 }}>
-        {/* Day headers */}
-        <Grid container spacing={1} sx={{ mb: 2 }}>
-          {dayNames.map((day) => (
-            <Grid item xs={12 / 7} key={day}>
-              <Typography
-                variant="subtitle2"
-                sx={{ fontWeight: 600, textAlign: 'center', color: 'text.secondary' }}
-              >
-                {day}
-              </Typography>
-            </Grid>
-          ))}
-        </Grid>
-
-        {/* Calendar days */}
-        <Grid container spacing={1}>
-          {renderCalendar().map((day, index) => (
-            <Grid item xs={12 / 7} key={index}>
-              {day}
-            </Grid>
-          ))}
-        </Grid>
-      </Paper>
-
       {/* Study Plan Generation Controls */}
-      <Paper sx={{ p: 3, mb: 4 }}>
+      <Paper
+        sx={{
+          p: 3,
+          mb: 4,
+          borderRadius: '24px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
+        }}
+      >
         <Typography variant="h5" sx={{ fontWeight: 600, mb: 3 }}>
           Study Plan Generator
         </Typography>
-        
+
         <Grid container spacing={3} alignItems="center">
           <Grid item xs={12} md={3}>
             <TextField
@@ -817,7 +906,7 @@ const Schedule: React.FC = () => {
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               InputLabelProps={{ shrink: true }}
-              inputProps={{ 
+              inputProps={{
                 min: new Date().toISOString().split('T')[0]
               }}
               fullWidth
@@ -867,7 +956,7 @@ const Schedule: React.FC = () => {
             </Box>
           </Grid>
         </Grid>
-        
+
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
           <Typography variant="body2" color="textSecondary">
             {tasks.filter(t => t.status !== 'completed').length} incomplete tasks available for planning
@@ -879,13 +968,13 @@ const Schedule: React.FC = () => {
             </Typography>
           )}
         </Box>
-        
+
         {planWarning && (
           <Alert severity="warning" sx={{ mt: 2 }}>
             {planWarning}
           </Alert>
         )}
-        
+
         {tasks.filter(t => t.status !== 'completed').length === 0 && !loading && (
           <Alert severity="info" sx={{ mt: 2 }}>
             No incomplete tasks available for study plan generation.
@@ -893,12 +982,112 @@ const Schedule: React.FC = () => {
         )}
       </Paper>
 
+
+
+      {/* Month Navigation */}
+      <Paper
+        className="bento-card animate-fade-in delay-100"
+        sx={{
+          p: 2,
+          mb: 4,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderRadius: '24px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
+        }}
+      >
+        <Button
+          startIcon={<ChevronLeftIcon />}
+          onClick={handlePrevMonth}
+          variant="text"
+          color="inherit"
+        >
+          Previous
+        </Button>
+        <Typography variant="h4" sx={{ fontWeight: 600 }}>
+          {monthName}
+        </Typography>
+        <Button
+          endIcon={<ChevronRightIcon />}
+          onClick={handleNextMonth}
+          variant="text"
+          color="inherit"
+        >
+          Next
+        </Button>
+      </Paper>
+
+      {/* Calendar Grid */}
+      <Paper
+        className="bento-card animate-fade-in delay-200"
+        sx={{
+          p: isMobile ? 2 : 3,
+          mb: 4,
+          borderRadius: '24px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Watermark Icon */}
+        <Typography
+          sx={{
+            position: 'absolute',
+            top: -20,
+            right: 20,
+            fontSize: '150px',
+            opacity: 0.03,
+            pointerEvents: 'none',
+            zIndex: 0
+          }}
+        >
+          📅
+        </Typography>
+        {/* Day headers */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, mb: 1 }}>
+          {dayNames.map((day) => (
+            <Box key={day} sx={{ textAlign: 'center' }}>
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  fontWeight: 600,
+                  color: 'text.secondary',
+                  fontSize: isMobile ? '0.75rem' : '0.875rem'
+                }}
+              >
+                {isMobile ? day.charAt(0) : day}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+
+        {/* Calendar days */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
+          {renderCalendar().map((day, index) => (
+            <Box key={index} sx={{ minHeight: isMobile ? 'auto' : 0 }}>
+              {day}
+            </Box>
+          ))}
+        </Box>
+      </Paper>
+
+
+
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
       )}
-      <Paper className="bento-card animate-fade-in delay-300" sx={{ p: 3, mb: 4 }}>
+      <Paper
+        className="bento-card animate-fade-in delay-300"
+        sx={{
+          p: 3,
+          mb: 4,
+          borderRadius: '24px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
+        }}
+      >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
             Calendar Items
@@ -907,7 +1096,7 @@ const Schedule: React.FC = () => {
             💡 Double-click any day to add a session
           </Typography>
         </Box>
-        
+
         <Box sx={{ mb: 3 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
             Task Types
@@ -935,7 +1124,7 @@ const Schedule: React.FC = () => {
             ))}
           </Box>
         </Box>
-        
+
         <Box>
           <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
             Study Sessions
@@ -963,143 +1152,173 @@ const Schedule: React.FC = () => {
       </Paper>
 
 
-      {/* Legend */}
-      <Dialog open={selectedDate !== null} onClose={handleCloseModal} maxWidth="md" fullWidth>
-        <DialogTitle>
-          Schedule for {selectedDate?.toLocaleDateString()}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-            {/* Study Sessions */}
-            {(() => {
-              const daySessions = selectedDate ? getStudySessionsForDate(selectedDate) : [];
-              return daySessions.length > 0 ? (
-                <>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 1 }}>
-                    Study Sessions
-                  </Typography>
-                  {daySessions.map((session) => {
-                    const isCompleted = completedSessions.has(session.id);
-                    return (
-                      <Card key={session.id} sx={{ 
-                        border: isCompleted ? '2px solid #4caf50' : '1px solid #e0e0e0',
-                        bgcolor: isCompleted ? '#f8fff8' : 'background.paper'
-                      }}>
-                        <CardContent>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                              {session.task_title}
-                            </Typography>
-                            <Chip
-                              label={isCompleted ? 'Completed' : `${session.priority}/10`}
-                              size="small"
-                              color={isCompleted ? 'success' : (session.priority >= 8 ? 'error' : session.priority >= 6 ? 'warning' : 'default')}
-                            />
-                          </Box>
-                          <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1 }}>
-                            Duration: {session.estimated_hours}h (schedule flexibly throughout your day)
-                          </Typography>
-                          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                            <Button
-                              size="small"
-                              variant="contained"
-                              onClick={() => navigate(`/sessions/${session.id}`)}
-                            >
-                              View Details
-                            </Button>
-                            <Button
-                              size="small"
-                              variant={isCompleted ? 'outlined' : 'contained'}
-                              color={isCompleted ? 'secondary' : 'primary'}
-                              onClick={() => toggleSessionCompletion(session.id)}
-                            >
-                              {isCompleted ? 'Mark Incomplete' : 'Mark Complete'}
-                            </Button>
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              color="error"
-                              onClick={() => {
-                                if (window.confirm('Remove this session?')) {
-                                  removeSession(session.id);
-                                }
-                              }}
-                            >
-                              Remove
-                            </Button>
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </>
-              ) : null;
-            })()}
-            
-            {/* Tasks */}
-            {selectedDayTasks.length > 0 && (
-              <>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2 }}>
-                  Tasks
-                </Typography>
-                {selectedDayTasks.map((task) => (
-                  <Card key={task.id}>
-                    <CardContent>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                        {task.title}
-                      </Typography>
-                      <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1 }}>
-                        {task.course_code}
-                      </Typography>
-                      <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                        <Chip
-                          label={task.task_type}
-                          size="small"
-                          sx={{ backgroundColor: task.status === 'completed' ? '#4caf50' : getTaskTypeColor(task.task_type), color: 'white' }}
-                        />
-                        <Chip
-                          label={`${task.grade_percentage}%`}
-                          size="small"
-                          sx={{ backgroundColor: task.grade_percentage >= 20 ? '#d32f2f' : '#388e3c', color: 'white' }}
-                        />
-                      </Box>
-                    </CardContent>
-                  </Card>
-                ))}
-              </>
+      {/* Mobile & Desktop Day Detail Dialog */}
+      {selectedDate && (
+        <Dialog
+          open={true}
+          onClose={handleCloseModal}
+          maxWidth="md"
+          fullWidth
+          fullScreen={isMobile}
+          PaperProps={{
+            sx: {
+              borderRadius: isMobile ? 0 : 2, // Rounded on desktop, square on mobile
+              m: isMobile ? 0 : 2
+            }
+          }}
+        >
+          <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+            <Box>
+              Schedule for {selectedDate?.toLocaleDateString([], { weekday: 'short', month: 'long', day: 'numeric' })}
+            </Box>
+            {isMobile && (
+              <Button onClick={handleCloseModal} size="small" variant="text">
+                Close
+              </Button>
             )}
-            
-            {/* No items message */}
-            {(() => {
-              const daySessions = selectedDate ? getStudySessionsForDate(selectedDate) : [];
-              if (daySessions.length === 0 && selectedDayTasks.length === 0) {
-                return (
-                  <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center', py: 4 }}>
-                    No tasks or study sessions scheduled for this day.
+          </DialogTitle>
+          <DialogContent>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+              {/* Study Sessions */}
+              {(() => {
+                const daySessions = selectedDate ? getStudySessionsForDate(selectedDate) : [];
+                return daySessions.length > 0 ? (
+                  <>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 1 }}>
+                      Study Sessions
+                    </Typography>
+                    {daySessions.map((session) => {
+                      const isCompleted = completedSessions.has(session.id);
+                      return (
+                        <Card key={session.id} sx={{
+                          border: isCompleted ? '2px solid #4caf50' : '1px solid #e0e0e0',
+                          bgcolor: isCompleted ? '#f8fff8' : 'background.paper'
+                        }}>
+                          <CardContent>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                              <Box>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                  {session.task_title}
+                                </Typography>
+                                {session.course_code && (
+                                  <Typography variant="caption" color="primary" sx={{ display: 'block', mt: 0.5 }}>
+                                    {session.course_code}
+                                  </Typography>
+                                )}
+                              </Box>
+                              {isCompleted && (
+                                <Chip
+                                  label="Completed"
+                                  size="small"
+                                  color="success"
+                                />
+                              )}
+                            </Box>
+                            <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1 }}>
+                              Duration: {session.estimated_hours}h (schedule flexibly throughout your day)
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                              <Button
+                                size="small"
+                                variant="contained"
+                                onClick={() => navigate(`/sessions/${session.id}`)}
+                              >
+                                View Details
+                              </Button>
+                              <Button
+                                size="small"
+                                variant={isCompleted ? 'outlined' : 'contained'}
+                                color={isCompleted ? 'secondary' : 'primary'}
+                                onClick={() => toggleSessionCompletion(session.id)}
+                              >
+                                {isCompleted ? 'Mark Incomplete' : 'Mark Complete'}
+                              </Button>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color="error"
+                                onClick={() => {
+                                  if (window.confirm('Remove this session?')) {
+                                    removeSession(session.id);
+                                  }
+                                }}
+                              >
+                                Remove
+                              </Button>
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </>
+                ) : null;
+              })()}
+
+              {/* Tasks */}
+              {selectedDayTasks.length > 0 && (
+                <>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 2 }}>
+                    Tasks
                   </Typography>
-                );
-              }
-              return null;
-            })()}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseModal}>Close</Button>
-        </DialogActions>
-      </Dialog>
+                  {selectedDayTasks.map((task) => (
+                    <Card key={task.id}>
+                      <CardContent>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                          {task.title}
+                        </Typography>
+                        <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mb: 1 }}>
+                          {task.course_code}
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                          <Chip
+                            label={task.task_type}
+                            size="small"
+                            sx={{ backgroundColor: task.status === 'completed' ? '#4caf50' : getTaskTypeColor(task.task_type), color: 'white' }}
+                          />
+                          <Chip
+                            label={`${task.grade_percentage}%`}
+                            size="small"
+                            sx={{ backgroundColor: task.grade_percentage >= 20 ? '#d32f2f' : '#388e3c', color: 'white' }}
+                          />
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </>
+              )}
+
+              {/* No items message */}
+              {(() => {
+                const daySessions = selectedDate ? getStudySessionsForDate(selectedDate) : [];
+                if (daySessions.length === 0 && selectedDayTasks.length === 0) {
+                  return (
+                    <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center', py: 4 }}>
+                      No tasks or study sessions scheduled for this day.
+                    </Typography>
+                  );
+                }
+                return null;
+              })()}
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseModal}>Close</Button>
+          </DialogActions>
+        </Dialog>
+      )}
 
       {/* Clear Sessions Confirmation Dialog */}
       <Dialog open={clearDialogOpen} onClose={() => setClearDialogOpen(false)}>
         <DialogTitle>Clear All Study Sessions?</DialogTitle>
         <DialogContent>
           <Typography>
-            This will permanently delete your current study plan and all session progress. 
+            This will permanently delete your current study plan and all session progress.
             You'll need to generate a new plan. This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setClearDialogOpen(false)}>Cancel</Button>
-          <Button 
+          <Button
             onClick={async () => {
               // Clear from cloud only if authenticated
               if (isAuthenticated) {
@@ -1117,7 +1336,7 @@ const Schedule: React.FC = () => {
                   }
                 }
               }
-              
+
               // Clear local data
               setStudyPlan(null);
               setCompletedSessions(new Set());
@@ -1151,6 +1370,13 @@ const Schedule: React.FC = () => {
               autoFocus
             />
             <TextField
+              label="Course Code (Optional)"
+              value={newSessionData.course_code}
+              onChange={(e) => setNewSessionData(prev => ({ ...prev, course_code: e.target.value }))}
+              fullWidth
+              placeholder="e.g., CS 101, EECS4314 F"
+            />
+            <TextField
               label="Estimated Hours"
               type="number"
               value={newSessionData.estimated_hours}
@@ -1158,25 +1384,17 @@ const Schedule: React.FC = () => {
               inputProps={{ min: 0.5, max: 12, step: 0.5 }}
               fullWidth
             />
-            <TextField
-              label="Priority (1-10)"
-              type="number"
-              value={newSessionData.priority}
-              onChange={(e) => setNewSessionData(prev => ({ ...prev, priority: parseInt(e.target.value) || 5 }))}
-              inputProps={{ min: 1, max: 10 }}
-              fullWidth
-              helperText="1 = Low priority, 10 = High priority"
-            />
+
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => {
             setAddSessionDialogOpen(false);
-            setNewSessionData({ task_title: '', estimated_hours: 2, priority: 5 });
+            setNewSessionData({ task_title: '', course_code: '', estimated_hours: 2, priority: 5 });
           }}>
             Cancel
           </Button>
-          <Button 
+          <Button
             onClick={addSession}
             variant="contained"
             disabled={!newSessionData.task_title.trim()}

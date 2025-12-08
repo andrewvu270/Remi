@@ -22,6 +22,8 @@ import {
   Speed as SpeedIcon,
   Assessment as AssessmentIcon,
   Refresh as RefreshIcon,
+  AutoAwesome as AutoAwesomeIcon,
+  Lightbulb as LightbulbIcon,
 } from '@mui/icons-material';
 import {
   LineChart,
@@ -38,11 +40,8 @@ import {
   CartesianGrid,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
-  RadialBarChart,
-  RadialBar,
-  Legend,
 } from 'recharts';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 interface AnalyticsData {
   weeklyProductivity: Array<{ day: string; hours: number; tasks: number; efficiency: number }>;
@@ -68,10 +67,8 @@ interface AnalyticsData {
 }
 
 const AnalyticsDashboard: React.FC = () => {
-  const theme = useTheme();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedMetric, setSelectedMetric] = useState<string>('productivity');
   const [animateCharts, setAnimateCharts] = useState(false);
 
   useEffect(() => {
@@ -82,7 +79,7 @@ const AnalyticsDashboard: React.FC = () => {
 
   const loadAnalyticsData = async () => {
     setLoading(true);
-    
+
     // Mock data - in real app, this would come from your backend
     const mockData: AnalyticsData = {
       weeklyProductivity: [
@@ -159,26 +156,6 @@ const AnalyticsDashboard: React.FC = () => {
     setLoading(false);
   };
 
-  const getMetricIcon = (metric: string) => {
-    switch (metric) {
-      case 'productivity': return <TrendingUpIcon />;
-      case 'stress': return <PsychologyIcon />;
-      case 'focus': return <SpeedIcon />;
-      case 'achievements': return <TrophyIcon />;
-      default: return <AssessmentIcon />;
-    }
-  };
-
-  const getMetricColor = (metric: string) => {
-    switch (metric) {
-      case 'productivity': return '#1976d2';
-      case 'stress': return '#f57c00';
-      case 'focus': return '#388e3c';
-      case 'achievements': return '#7b1fa2';
-      default: return '#757575';
-    }
-  };
-
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -207,9 +184,6 @@ const AnalyticsDashboard: React.FC = () => {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-            MyDesk Analytics
-          </Typography>
           <Typography variant="body1" color="textSecondary">
             Track your productivity patterns and optimize your workflow
           </Typography>
@@ -290,11 +264,11 @@ const AnalyticsDashboard: React.FC = () => {
                       </Typography>
                     </Box>
                   </Box>
-                  
+
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     {metric.title}
                   </Typography>
-                  
+
                   <LinearProgress
                     variant="determinate"
                     value={Math.min(100, metric.progress)}
@@ -315,6 +289,42 @@ const AnalyticsDashboard: React.FC = () => {
         ))}
       </Grid>
 
+      {/* AI Insights Section */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.25 }}
+          >
+            <Card sx={{ p: 3, position: 'relative', overflow: 'hidden', border: '2px solid #FFF3E0' }}>
+              <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', background: 'linear-gradient(90deg, #FFD700, #FFA500)' }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <AutoAwesomeIcon sx={{ color: '#FFA500' }} />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Remi's AI Insights
+                </Typography>
+                <Chip label="Beta" size="small" sx={{ height: 20, bgcolor: '#FFF3E0', color: '#E65100' }} />
+              </Box>
+
+              <Typography variant="body1" color="text.secondary" paragraph>
+                Based on your recent study sessions, you're doing great at maintaining streaks! However, your late-night sessions seem to have lower focus scores.
+              </Typography>
+
+              <Box sx={{ bgcolor: 'background.default', p: 2, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <LightbulbIcon fontSize="small" color="primary" />
+                  Recommendation
+                </Typography>
+                <Typography variant="body2">
+                  Try shifting your "Operating Systems" study block to 10:00 AM when your energy levels are reportedly highest.
+                </Typography>
+              </Box>
+            </Card>
+          </motion.div>
+        </Grid>
+      </Grid>
+
       {/* Charts Section */}
       <Grid container spacing={3}>
         {/* Weekly Productivity Chart */}
@@ -330,18 +340,18 @@ const AnalyticsDashboard: React.FC = () => {
                   <TimelineIcon color="primary" />
                   Weekly Productivity Trends
                 </Typography>
-                
+
                 {animateCharts && (
                   <ResponsiveContainer width="100%" height={300}>
                     <AreaChart data={data.weeklyProductivity}>
                       <defs>
                         <linearGradient id="colorHours" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#1976d2" stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor="#1976d2" stopOpacity={0.1}/>
+                          <stop offset="5%" stopColor="#1976d2" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#1976d2" stopOpacity={0.1} />
                         </linearGradient>
                         <linearGradient id="colorEfficiency" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#388e3c" stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor="#388e3c" stopOpacity={0.1}/>
+                          <stop offset="5%" stopColor="#388e3c" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#388e3c" stopOpacity={0.1} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -388,7 +398,7 @@ const AnalyticsDashboard: React.FC = () => {
                   <AssessmentIcon color="primary" />
                   Task Distribution
                 </Typography>
-                
+
                 {animateCharts && (
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
@@ -430,7 +440,7 @@ const AnalyticsDashboard: React.FC = () => {
                   <PsychologyIcon color="primary" />
                   Stress & Burnout Trends
                 </Typography>
-                
+
                 {animateCharts && (
                   <ResponsiveContainer width="100%" height={250}>
                     <LineChart data={data.stressTrends}>
@@ -477,7 +487,7 @@ const AnalyticsDashboard: React.FC = () => {
                   <SpeedIcon color="primary" />
                   Daily Focus Patterns
                 </Typography>
-                
+
                 {animateCharts && (
                   <ResponsiveContainer width="100%" height={250}>
                     <BarChart data={data.focusPatterns}>
@@ -520,7 +530,7 @@ const AnalyticsDashboard: React.FC = () => {
                   <TrophyIcon color="primary" />
                   Achievement Progress
                 </Typography>
-                
+
                 <Grid container spacing={3}>
                   {data.achievements.map((achievement, index) => (
                     <Grid item xs={12} sm={6} md={4} key={achievement.id}>
@@ -544,7 +554,7 @@ const AnalyticsDashboard: React.FC = () => {
                               </Typography>
                             </Box>
                           </Box>
-                          
+
                           <Box sx={{ mb: 1 }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                               <Typography variant="caption" color="textSecondary">
@@ -568,7 +578,7 @@ const AnalyticsDashboard: React.FC = () => {
                               }}
                             />
                           </Box>
-                          
+
                           {achievement.unlocked && (
                             <Chip
                               label="Unlocked!"

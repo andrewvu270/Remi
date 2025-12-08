@@ -82,6 +82,8 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
   const shortBreak = 5 * 60; // 5 minutes
   const longBreak = 15 * 60; // 15 minutes
 
+
+
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
@@ -108,7 +110,7 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
     const savedAchievements = localStorage.getItem('pomodoroAchievements');
     const savedLevel = localStorage.getItem('pomodoroLevel');
     const savedExp = localStorage.getItem('pomodoroExp');
-    
+
     if (savedStats) setStats(JSON.parse(savedStats));
     if (savedAchievements) setAchievements(JSON.parse(savedAchievements));
     if (savedLevel) setLevel(parseInt(savedLevel));
@@ -162,23 +164,23 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
 
   const handleSessionComplete = () => {
     setIsRunning(false);
-    
+
     if (sessionType === 'focus') {
       const newStreak = streak + 1;
       const experienceGained = 25 + (newStreak > 3 ? 10 : 0); // Bonus XP for streaks
       const newExperience = experience + experienceGained;
       const newLevel = Math.floor(newExperience / 100) + 1;
-      
+
       setStreak(newStreak);
       setExperience(newExperience);
-      
+
       // Check for level up
       if (newLevel > level) {
         setLevel(newLevel);
         setShowLevelUp(true);
         setTimeout(() => setShowLevelUp(false), 3000);
       }
-      
+
       // Update stats
       const newStats = {
         ...stats,
@@ -192,10 +194,10 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
       localStorage.setItem('pomodoroStats', JSON.stringify(newStats));
       localStorage.setItem('pomodoroExp', newExperience.toString());
       localStorage.setItem('pomodoroLevel', newLevel.toString());
-      
+
       // Check achievements
       checkAndUnlockAchievements(newStats, newStreak);
-      
+
       // Determine break length
       if (newStreak % 4 === 0) {
         setSessionType('break');
@@ -208,7 +210,7 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
         // Small energy restore on short break
         setEnergyLevel(prev => Math.min(100, prev + 10));
       }
-      
+
       // Show celebration for milestones
       if (newStreak % 4 === 0 || newStreak === 1) {
         setShowCelebration(true);
@@ -221,14 +223,14 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
       setEnergyLevel(prev => Math.min(100, prev + 20));
     }
   };
-  
+
   const checkAndUnlockAchievements = (newStats: PomodoroStats, currentStreak: number) => {
     const updatedAchievements = achievements.map(achievement => {
       if (achievement.unlocked) return achievement;
-      
+
       let newProgress = achievement.progress;
       let shouldUnlock = false;
-      
+
       switch (achievement.id) {
         case 'first_session':
           newProgress = Math.min(achievement.maxProgress, newStats.totalSessions);
@@ -247,19 +249,19 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
           shouldUnlock = newStats.totalSessions >= 10 && energyLevel > 70;
           break;
       }
-      
+
       if (shouldUnlock && !achievement.unlocked) {
         setShowCelebration(true);
         setTimeout(() => setShowCelebration(false), 2000);
       }
-      
+
       return {
         ...achievement,
         progress: newProgress,
         unlocked: shouldUnlock
       };
     });
-    
+
     setAchievements(updatedAchievements);
     localStorage.setItem('pomodoroAchievements', JSON.stringify(updatedAchievements));
   };
@@ -292,15 +294,7 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
     return theme.palette.success.main;
   };
 
-  const getIconForType = (iconType: Achievement['iconType']) => {
-    switch (iconType) {
-      case 'star': return <StarIcon />;
-      case 'fire': return <FireIcon />;
-      case 'trophy': return <TrophyIcon />;
-      case 'energy': return <EnergyIcon />;
-      default: return <StarIcon />;
-    }
-  };
+
 
   const getStyleSpecificTip = (): string => {
     const tips = {
@@ -309,7 +303,7 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
       hands_on: "🔧 Practice with a concrete example",
       auditory: "🎧 Explain the concept out loud to yourself"
     };
-    
+
     return tips[learningStyle as keyof typeof tips] || "💡 Stay focused on your learning goal";
   };
 
@@ -343,7 +337,7 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
-      
+
       {/* Celebration Animation */}
       <AnimatePresence>
         {showCelebration && (
@@ -370,7 +364,7 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
-      
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -402,21 +396,26 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
           </Box>
           <CardContent>
             <Box sx={{ mt: 2 }}>
-              {/* Header with Level and XP */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <TimerIcon sx={{ color: getSessionColor() }} />
-                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    {sessionType === 'focus' ? 'Focus Time' : 'Break Time'}
-                  </Typography>
-                  <Chip
-                    label={`${streak} 🔥`}
-                    size="small"
-                    color="primary"
-                    variant={streak > 0 ? 'filled' : 'outlined'}
-                  />
+              {/* Header with Icon and Level */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <TimerIcon sx={{ color: getSessionColor() }} />
+                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                        {sessionType === 'focus' ? 'Focus Time' : 'Break Time'}
+                      </Typography>
+                    </Box>
+                    <Chip
+                      label={`${streak} 🔥`}
+                      size="small"
+                      color="primary"
+                      variant={streak > 0 ? 'filled' : 'outlined'}
+                      sx={{ mt: 0.5 }}
+                    />
+                  </Box>
                 </Box>
-                
+
                 {/* Level Display */}
                 <motion.div
                   whileHover={{ scale: 1.05 }}
@@ -435,7 +434,7 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
                   />
                 </motion.div>
               </Box>
-              
+
               {/* XP Progress Bar */}
               <Box sx={{ mb: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
@@ -467,7 +466,7 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2 }}
               >
-                <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
+                <Typography variant="body1" sx={{ mb: 2, fontWeight: 500, textAlign: 'center' }}>
                   {taskTitle}
                 </Typography>
               </motion.div>
@@ -478,8 +477,8 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: "spring", duration: 0.5 }}
               >
-                <Box sx={{ 
-                  textAlign: 'center', 
+                <Box sx={{
+                  textAlign: 'center',
                   mb: 3,
                   py: 3,
                   bgcolor: `${getSessionColor()}10`,
@@ -511,7 +510,7 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
                       }}
                     />
                   )}
-                  
+
                   <motion.div
                     animate={{
                       scale: isRunning ? [1, 1.02, 1] : 1,
@@ -522,10 +521,10 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
                       ease: "easeInOut"
                     }}
                   >
-                    <Typography 
-                      variant="h2" 
-                      sx={{ 
-                        fontWeight: 700, 
+                    <Typography
+                      variant="h2"
+                      sx={{
+                        fontWeight: 700,
                         color: getSessionColor(),
                         fontFamily: 'monospace',
                         textShadow: isRunning ? `0 0 20px ${getSessionColor()}` : 'none'
@@ -534,11 +533,11 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
                       {formatTime(timeLeft)}
                     </Typography>
                   </motion.div>
-                  
+
                   {/* Progress Bar */}
-                  <Box sx={{ 
-                    width: '80%', 
-                    mx: 'auto', 
+                  <Box sx={{
+                    width: '80%',
+                    mx: 'auto',
                     mt: 2,
                     height: 8,
                     bgcolor: 'grey.200',
@@ -559,38 +558,38 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
                 </Box>
               </motion.div>
 
-        {/* Learning Style Tip */}
-        <Box sx={{ 
-          mb: 2,
-          p: 2,
-          bgcolor: theme.palette.info.light,
-          borderRadius: 2,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1,
-          cursor: 'pointer'
-        }}
-        onClick={() => setShowTip(!showTip)}
-        >
-          <PsychologyIcon color="info" />
-          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-            {getStyleSpecificTip()}
-          </Typography>
-        </Box>
+              {/* Learning Style Tip */}
+              <Box sx={{
+                mb: 2,
+                p: 2,
+                bgcolor: '#FFF3E0', // Landing Page Beige
+                borderRadius: 2,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                cursor: 'pointer'
+              }}
+                onClick={() => setShowTip(!showTip)}
+              >
+                <PsychologyIcon color="info" />
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {getStyleSpecificTip()}
+                </Typography>
+              </Box>
 
-        {/* Additional Study Tips */}
-        {showTip && studyTips.length > 0 && (
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="subtitle2" gutterBottom>
-              More Study Tips:
-            </Typography>
-            {studyTips.slice(0, 2).map((tip, index) => (
-              <Typography key={index} variant="body2" sx={{ mb: 1 }}>
-                • {tip}
-              </Typography>
-            ))}
-          </Box>
-        )}
+              {/* Additional Study Tips */}
+              {showTip && studyTips.length > 0 && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    More Study Tips:
+                  </Typography>
+                  {studyTips.slice(0, 2).map((tip, index) => (
+                    <Typography key={index} variant="body2" sx={{ mb: 1 }}>
+                      • {tip}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
 
               {/* Enhanced Control Buttons */}
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', mb: 3 }}>
@@ -612,7 +611,7 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
                     {isRunning ? 'Pause' : 'Start'}
                   </Button>
                 </motion.div>
-                
+
                 {sessionType === 'focus' && (
                   <motion.div
                     whileHover={{ scale: 1.05 }}
@@ -630,7 +629,7 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
                     </Button>
                   </motion.div>
                 )}
-                
+
                 <Tooltip title="Reset Timer">
                   <motion.div
                     whileHover={{ scale: 1.1 }}
@@ -643,106 +642,12 @@ const PomodoroTimer: React.FC<PomodoroTimerProps> = ({
                 </Tooltip>
               </Box>
 
-              {/* Enhanced Session Stats */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-              >
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-around', 
-                  mt: 3,
-                  pt: 2,
-                  borderTop: '1px solid #eee'
-                }}>
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    style={{ textAlign: 'center' }}
-                  >
-                    <Typography variant="h6" color="primary">
-                      {streak}
-                    </Typography>
-                    <Typography variant="caption" color="textSecondary">
-                      Sessions Today
-                    </Typography>
-                  </motion.div>
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    style={{ textAlign: 'center' }}
-                  >
-                    <Typography variant="h6" color="success.main">
-                      {Math.round((streak * focusTime) / 60)}
-                    </Typography>
-                    <Typography variant="caption" color="textSecondary">
-                      Focus Minutes
-                    </Typography>
-                  </motion.div>
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    style={{ textAlign: 'center' }}
-                  >
-                    <Typography variant="h6" color="info.main">
-                      {streak > 0 ? Math.round((streak * (focusTime + shortBreak)) / 60) : 0}
-                    </Typography>
-                    <Typography variant="caption" color="textSecondary">
-                      Total Minutes
-                    </Typography>
-                  </motion.div>
-                </Box>
-              </motion.div>
-              
-              {/* Achievements Section */}
-              {achievements.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.6 }}
-                >
-                  <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #eee' }}>
-                    <Typography variant="subtitle2" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <TrophyIcon color="primary" />
-                      Achievements
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                      {achievements.slice(0, 4).map((achievement) => (
-                        <motion.div
-                          key={achievement.id}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          <Chip
-                            avatar={
-                              <Avatar sx={{ 
-                                width: 20, 
-                                height: 20, 
-                                bgcolor: achievement.unlocked ? 'primary.main' : 'grey.300' 
-                              }}>
-                                {getIconForType(achievement.iconType)}
-                              </Avatar>
-                            }
-                            label={achievement.name}
-                            size="small"
-                            color={achievement.unlocked ? 'primary' : 'default'}
-                            variant={achievement.unlocked ? 'filled' : 'outlined'}
-                            sx={{
-                              opacity: achievement.unlocked ? 1 : 0.6,
-                              fontSize: '0.7rem'
-                            }}
-                          />
-                        </motion.div>
-                      ))}
-                    </Box>
-                  </Box>
-                </motion.div>
-              )}
             </Box>
           </CardContent>
         </Card>
       </motion.div>
     </>
   );
-
 };
 
 export default PomodoroTimer;

@@ -31,7 +31,6 @@ import {
   CheckCircle as TasksIcon,
   DateRange as CalendarIcon,
   Timer as SessionsIcon,
-  Poll as SurveyIcon,
   Logout as LogoutIcon,
   CloudUpload as CloudUploadIcon,
   Menu as MenuIcon,
@@ -129,7 +128,6 @@ const Navigation: React.FC = () => {
     { text: 'Tasks', icon: <TasksIcon />, path: '/tasks' },
     { text: 'Calendar', icon: <CalendarIcon />, path: '/schedule' },
     { text: 'Sessions', icon: <SessionsIcon />, path: '/sessions' },
-    { text: 'Survey', icon: <SurveyIcon />, path: '/survey' },
   ];
 
   return (
@@ -161,7 +159,7 @@ const Navigation: React.FC = () => {
               cursor: 'pointer'
             }}
           >
-            MyDesk
+            Remi
           </Typography>
 
           {/* Desktop Navigation */}

@@ -4,24 +4,16 @@ import {
   Paper,
   Box,
   Typography,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
   Chip,
   CircularProgress,
   Alert,
   Tabs,
   Tab,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Button,
+  IconButton,
 } from '@mui/material';
+import { CheckCircle, RadioButtonUnchecked } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { BarChart } from '@mui/icons-material';
-import SessionAnalytics from '../components/SessionAnalytics';
 import { API_BASE_URL } from '../config/api';
 
 interface Session {
@@ -35,6 +27,7 @@ interface Session {
   pomodoro_count: number;
   started_at?: string;
   completed_at?: string;
+  course_code?: string;
 }
 
 const Sessions: React.FC = () => {
@@ -42,8 +35,6 @@ const Sessions: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
-  const [sortBy, setSortBy] = useState<'date' | 'priority'>('date');
-  const [showAnalytics, setShowAnalytics] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -54,7 +45,7 @@ const Sessions: React.FC = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('access_token');
-      
+
       // Guest mode: Load from localStorage
       if (!token) {
         const storedPlan = localStorage.getItem('studyPlan'); // Changed from 'study_plan' to 'studyPlan'
@@ -62,15 +53,20 @@ const Sessions: React.FC = () => {
           try {
             const plan = JSON.parse(storedPlan);
             const allSessions = plan.sessions || [];
-            
+
+            // Deduplicate sessions by ID
+            const uniqueSessions = Array.from(
+              new Map(allSessions.map((s: any) => [s.id, s])).values()
+            ) as Session[];
+
             // Apply filter
-            let filteredSessions = allSessions;
+            let filteredSessions = uniqueSessions;
             if (filter === 'active') {
-              filteredSessions = allSessions.filter((s: Session) => !s.completed);
+              filteredSessions = uniqueSessions.filter((s: Session) => !s.completed);
             } else if (filter === 'completed') {
-              filteredSessions = allSessions.filter((s: Session) => s.completed);
+              filteredSessions = uniqueSessions.filter((s: Session) => s.completed);
             }
-            
+
             setSessions(filteredSessions);
           } catch (e) {
             console.error('Failed to parse stored plan:', e);
@@ -83,7 +79,7 @@ const Sessions: React.FC = () => {
         setLoading(false);
         return;
       }
-      
+
       // Authenticated mode: Load from backend
       const response = await fetch(`${API_BASE_URL}/api/sessions?status=${filter}`, {
         headers: {
@@ -147,9 +143,7 @@ const Sessions: React.FC = () => {
 
   const sortSessions = (sessionList: Session[]) => {
     return [...sessionList].sort((a, b) => {
-      if (sortBy === 'priority') {
-        return b.priority - a.priority;
-      }
+      // Default sort by date
       return new Date(a.day).getTime() - new Date(b.day).getTime();
     });
   };
@@ -160,6 +154,102 @@ const Sessions: React.FC = () => {
     return 'success';
   };
 
+  const toggleSessionComplete = async (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent navigation to session detail
+
+    console.log('Toggling session:', sessionId);
+
+    const token = localStorage.getItem('access_token');
+
+    // Guest mode: Update localStorage
+    if (!token) {
+      const storedPlan = localStorage.getItem('studyPlan');
+      if (storedPlan) {
+        try {
+          const plan = JSON.parse(storedPlan);
+
+          // Find the specific session to toggle
+          const targetSession = plan.sessions.find((s: Session) => s.id === sessionId);
+          if (!targetSession) {
+            console.error('Session not found:', sessionId);
+            return;
+          }
+
+          console.log('Current session state:', targetSession.completed);
+          const newCompletedState = !targetSession.completed;
+
+          // Update only the specific session
+          const updatedSessions = plan.sessions.map((s: Session) => {
+            if (s.id === sessionId) {
+              console.log('Updating session', s.id, 'to completed:', newCompletedState);
+
+              if (newCompletedState) {
+                // Marking as complete - use estimated hours if no actual hours
+                return {
+                  ...s,
+                  completed: true,
+                  completed_at: new Date().toISOString(),
+                  actual_hours: s.actual_hours || s.estimated_hours
+                };
+              } else {
+                // Marking as incomplete - reset all completion data
+                return {
+                  ...s,
+                  completed: false,
+                  completed_at: undefined,
+                  actual_hours: undefined,
+                  reflection: undefined,
+                  pomodoro_count: 0
+                };
+              }
+            }
+            return s;
+          });
+
+          const updatedPlan = { ...plan, sessions: updatedSessions };
+          localStorage.setItem('studyPlan', JSON.stringify(updatedPlan));
+          localStorage.setItem('studyPlanTimestamp', Date.now().toString());
+
+          // Reload sessions from localStorage to ensure consistency
+          fetchSessions();
+        } catch (error) {
+          console.error('Failed to update session:', error);
+        }
+      }
+      return;
+    }
+
+    // Authenticated mode: Update backend
+    try {
+      const session = sessions.find(s => s.id === sessionId);
+      if (!session) return;
+
+      const response = await fetch(`${API_BASE_URL}/api/sessions/${sessionId}/complete`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          completed: !session.completed
+        })
+      });
+
+      if (response.ok) {
+        // Update local state
+        setSessions(prevSessions =>
+          prevSessions.map(s =>
+            s.id === sessionId
+              ? { ...s, completed: !s.completed, completed_at: !s.completed ? new Date().toISOString() : undefined }
+              : s
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Failed to update session:', error);
+    }
+  };
+
   const renderSessionGroup = (title: string, sessionList: Session[]) => {
     if (sessionList.length === 0) return null;
 
@@ -167,55 +257,94 @@ const Sessions: React.FC = () => {
 
     return (
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.875rem' }}>
           {title} ({sessionList.length})
         </Typography>
-        <List>
+        <Box sx={{ display: 'grid', gap: 2 }}>
           {sorted.map(session => (
-            <ListItem key={session.id} disablePadding sx={{ mb: 1 }}>
-              <ListItemButton
-                onClick={() => navigate(`/sessions/${session.id}`)}
-                sx={{
-                  border: '1px solid #e0e0e0',
-                  borderRadius: 2,
-                  '&:hover': { backgroundColor: '#f5f5f5' }
-                }}
-              >
-                <ListItemText
-                  primary={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-                        {session.task_title}
-                      </Typography>
-                      {session.completed && (
-                        <Chip label="Completed" size="small" color="success" />
-                      )}
-                      {session.pomodoro_count > 0 && (
-                        <Chip label={`🍅 ${session.pomodoro_count}`} size="small" />
-                      )}
-                    </Box>
-                  }
-                  secondary={
-                    <Box sx={{ display: 'flex', gap: 2, mt: 0.5 }}>
-                      <Typography variant="body2" color="textSecondary">
-                        📅 {new Date(session.day).toLocaleDateString()}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        ⏱️ {session.actual_hours || session.estimated_hours}h
-                        {session.actual_hours && ` (est: ${session.estimated_hours}h)`}
-                      </Typography>
+            <Paper
+              key={session.id}
+              elevation={0}
+              onClick={() => navigate(`/sessions/${session.id}`)}
+              sx={{
+                p: 2,
+                borderRadius: '16px',
+                bgcolor: session.completed ? '#FFF3E0' : 'background.paper', // Beige for completed
+                border: '1px solid',
+                borderColor: 'divider',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease-in-out',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                position: 'relative',
+                overflow: 'hidden',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 12px 24px -10px rgba(0, 0, 0, 0.1)',
+                  borderColor: 'primary.light',
+                }
+              }}
+            >
+              {/* Left Stripe for Priority/Status indicator could go here */}
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flex: 1 }}>
+                <Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+                    <IconButton
+                      size="small"
+                      onClick={(e) => toggleSessionComplete(session.id, e)}
+                      sx={{
+                        color: session.completed ? 'secondary.main' : 'text.disabled',
+                        p: 0.5,
+                        '&:hover': { color: session.completed ? 'secondary.dark' : 'primary.main' }
+                      }}
+                    >
+                      {session.completed ? <CheckCircle fontSize="small" /> : <RadioButtonUnchecked fontSize="small" />}
+                    </IconButton>
+                    <Typography
+                      variant="subtitle1"
+                      sx={{
+                        fontWeight: 600,
+                        textDecoration: session.completed ? 'line-through' : 'none',
+                        color: session.completed ? 'secondary.dark' : 'text.primary'
+                      }}
+                    >
+                      {session.task_title}
+                    </Typography>
+                    {session.course_code && (
                       <Chip
-                        label={`Priority: ${session.priority}`}
+                        label={session.course_code}
                         size="small"
-                        color={getPriorityColor(session.priority)}
+                        sx={{
+                          height: 24,
+                          bgcolor: 'primary.50',
+                          color: 'primary.main',
+                          fontWeight: 600,
+                          fontSize: '0.75rem'
+                        }}
                       />
-                    </Box>
-                  }
-                />
-              </ListItemButton>
-            </ListItem>
+                    )}
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 2, ml: 4.5 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      📅 {new Date(session.day).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      ⏱️ {session.actual_hours || session.estimated_hours}h
+                    </Typography>
+                    {session.pomodoro_count > 0 && (
+                      <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        🍅 {session.pomodoro_count}
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* Status Badge/Action icon (Chevron) could go here */}
+            </Paper>
           ))}
-        </List>
+        </Box>
       </Box>
     );
   };
@@ -232,33 +361,26 @@ const Sessions: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <Box>
-          <Typography variant="h2" component="h1" sx={{ mb: 1 }}>
-            Study Sessions
-          </Typography>
-          <Typography variant="body1" color="textSecondary">
-            Track and manage your study sessions
-          </Typography>
-        </Box>
-        <Button
-          variant={showAnalytics ? 'contained' : 'outlined'}
-          startIcon={<BarChart />}
-          onClick={() => setShowAnalytics(!showAnalytics)}
-        >
-          {showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
-        </Button>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h2" component="h1" sx={{ mb: 1 }}>
+          Study Sessions
+        </Typography>
+        <Typography variant="body1" color="textSecondary">
+          Track and manage your study sessions
+        </Typography>
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
-      {showAnalytics && (
-        <Box sx={{ mb: 4 }}>
-          <SessionAnalytics />
-        </Box>
-      )}
-
-      <Paper sx={{ p: 3, mb: 4 }}>
+      <Paper
+        sx={{
+          p: 3,
+          mb: 4,
+          borderRadius: '24px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+          overflow: 'hidden'
+        }}
+      >
         <Box sx={{ display: 'flex', gap: 3, alignItems: 'center', flexWrap: 'wrap' }}>
           <Tabs value={filter} onChange={(_, v) => setFilter(v)}>
             <Tab label="All" value="all" />
@@ -266,30 +388,43 @@ const Sessions: React.FC = () => {
             <Tab label="Completed" value="completed" />
           </Tabs>
 
-          <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel>Sort By</InputLabel>
-            <Select
-              value={sortBy}
-              label="Sort By"
-              onChange={(e) => setSortBy(e.target.value as 'date' | 'priority')}
-            >
-              <MenuItem value="date">Date</MenuItem>
-              <MenuItem value="priority">Priority</MenuItem>
-            </Select>
-          </FormControl>
+
         </Box>
       </Paper>
 
       {sessions.length === 0 ? (
-        <Paper sx={{ p: 4, textAlign: 'center' }}>
+        <Paper
+          sx={{
+            p: 4,
+            textAlign: 'center',
+            borderRadius: '24px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+        >
+          {/* Watermark Icon */}
+          <Typography
+            sx={{
+              position: 'absolute',
+              top: -20,
+              right: 20,
+              fontSize: '120px',
+              opacity: 0.03,
+              pointerEvents: 'none',
+              zIndex: 0
+            }}
+          >
+            ⏱️
+          </Typography>
           <Typography variant="h6" color="textSecondary">
             No sessions found
           </Typography>
           <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
             Generate a study plan on the Schedule page to create sessions
           </Typography>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             sx={{ mt: 2 }}
             onClick={() => navigate('/schedule')}
           >
@@ -304,7 +439,7 @@ const Sessions: React.FC = () => {
           {renderSessionGroup('Later', grouped.later)}
         </>
       )}
-    </Container>
+    </Container >
   );
 };
 

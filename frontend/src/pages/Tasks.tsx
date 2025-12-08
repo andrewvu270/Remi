@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { API_BASE_URL } from '../config/api';
+import { useSearchParams } from 'react-router-dom';
 import { agentService } from '../utils/agentService';
 import {
   Container,
@@ -28,11 +28,9 @@ import {
   CheckCircle as CheckCircleIcon,
   Schedule as ScheduleIcon,
   Refresh as RefreshIcon,
-  Search as SearchIcon,
 } from '@mui/icons-material';
-import { fetchAllTasks } from '../utils/taskStorage';
+import { fetchAllTasks, addTask, updateTaskStatus } from '../utils/taskStorage';
 import { Task } from '../types/task';
-import TaskResearchDialog from '../components/TaskResearchDialog';
 
 // Using the Task type from types/task.ts
 
@@ -40,16 +38,21 @@ import TaskResearchDialog from '../components/TaskResearchDialog';
 const Tasks: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [searchParams] = useSearchParams();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [sortBy, setSortBy] = useState<'deadline' | 'priority'>('priority');
-  const [filterBy, setFilterBy] = useState<'all' | 'pending' | 'completed'>('all');
+  const [filterBy, setFilterBy] = useState<'all' | 'pending' | 'completed' | 'dueSoon'>(() => {
+    const urlFilter = searchParams.get('filter');
+    if (urlFilter === 'completed') return 'completed';
+    if (urlFilter === 'pending') return 'pending';
+    if (urlFilter === 'dueSoon') return 'dueSoon';
+    return 'all';
+  });
   const [isPrioritizing, setIsPrioritizing] = useState(false);
-  const [researchTask, setResearchTask] = useState<Task | null>(null);
-  const [openResearchDialog, setOpenResearchDialog] = useState(false);
   const [newTask, setNewTask] = useState({
     title: '',
     task_type: 'Assignment',
@@ -66,7 +69,7 @@ const Tasks: React.FC = () => {
     try {
       setLoading(true);
       const data = await fetchAllTasks();
-      
+
       // Set tasks directly without agent predictions for now
       setTasks(data.tasks);
       setError(null);
@@ -89,7 +92,7 @@ const Tasks: React.FC = () => {
         tasks: pendingTasks,
         user_id: userId,
       });
-      
+
       // Update tasks with new AI priority scores
       const updatedTasks = tasks.map(task => {
         const priorityInfo = prioritization.prioritized_tasks?.find((p: any) => p.task_id === task.id);
@@ -103,7 +106,7 @@ const Tasks: React.FC = () => {
         }
         return task;
       });
-      
+
       setTasks(updatedTasks);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to re-prioritize tasks');
@@ -114,12 +117,7 @@ const Tasks: React.FC = () => {
 
   const handleAddTask = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/tasks`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTask),
-      });
-      if (!response.ok) throw new Error('Failed to create task');
+      await addTask(newTask);
       setNewTask({
         title: '',
         task_type: 'Assignment',
@@ -134,15 +132,37 @@ const Tasks: React.FC = () => {
     }
   };
 
-  const handleCompleteTask = async (taskId: string) => {
+  const handleToggleTaskStatus = async (taskId: string, currentStatus: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}/complete`, {
-        method: 'POST',
-      });
-      if (!response.ok) throw new Error('Failed to complete task');
+      const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
+      await updateTaskStatus(taskId, newStatus);
+
+      // If marking as pending, reset all related session stats
+      if (newStatus === 'pending') {
+        const storedPlan = localStorage.getItem('studyPlan');
+        if (storedPlan) {
+          const plan = JSON.parse(storedPlan);
+          const updatedSessions = plan.sessions.map((s: any) => {
+            // Reset sessions related to this task
+            if (s.task_id === taskId) {
+              return {
+                ...s,
+                completed: false,
+                completed_at: undefined,
+                actual_hours: undefined,
+                reflection: undefined,
+                pomodoro_count: 0
+              };
+            }
+            return s;
+          });
+          localStorage.setItem('studyPlan', JSON.stringify({ ...plan, sessions: updatedSessions }));
+        }
+      }
+
       fetchTasks();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to complete task');
+      setError(err instanceof Error ? err.message : 'Failed to update task status');
     }
   };
 
@@ -156,6 +176,16 @@ const Tasks: React.FC = () => {
       Lab: 'success',
     };
     return colors[type] || 'default';
+  };
+
+  const getPriorityLabel = (priorityScore: number): { label: string; color: 'error' | 'warning' | 'info' | 'success' } => {
+    // Priority score is 0-1 from backend, convert to 0-10 scale
+    const scaledScore = priorityScore * 10;
+
+    if (scaledScore >= 8) return { label: 'Critical', color: 'error' };
+    if (scaledScore >= 6) return { label: 'High', color: 'warning' };
+    if (scaledScore >= 4) return { label: 'Medium', color: 'info' };
+    return { label: 'Low', color: 'success' };
   };
 
   const getHoursRemaining = (dueDate: string): string => {
@@ -174,6 +204,12 @@ const Tasks: React.FC = () => {
     let filtered = tasks.filter((task) => {
       if (filterBy === 'pending') return task.status === 'pending';
       if (filterBy === 'completed') return task.status === 'completed';
+      if (filterBy === 'dueSoon') {
+        const threeDaysFromNow = new Date();
+        threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+        const taskDate = new Date(task.due_date);
+        return task.status === 'pending' && taskDate <= threeDaysFromNow;
+      }
       return true; // 'all'
     });
 
@@ -201,15 +237,7 @@ const Tasks: React.FC = () => {
     });
   };
 
-  const handleOpenResearch = (task: Task) => {
-    setResearchTask(task);
-    setOpenResearchDialog(true);
-  };
 
-  const handleCloseResearch = () => {
-    setOpenResearchDialog(false);
-    setResearchTask(null);
-  };
 
   if (loading) {
     return (
@@ -306,6 +334,13 @@ const Tasks: React.FC = () => {
           justifyContent: { xs: 'center', sm: 'flex-start' }
         }}>
           <Button
+            variant={filterBy === 'dueSoon' ? 'contained' : 'text'}
+            onClick={() => setFilterBy('dueSoon')}
+            sx={{ borderRadius: '100px' }}
+          >
+            Due Soon
+          </Button>
+          <Button
             variant={filterBy === 'pending' ? 'contained' : 'text'}
             onClick={() => setFilterBy('pending')}
             sx={{ borderRadius: '100px' }}
@@ -355,7 +390,15 @@ const Tasks: React.FC = () => {
       </Box>
 
       {tasks.length === 0 ? (
-        <Paper className="bento-card animate-fade-in delay-200" sx={{ p: 8, textAlign: 'center' }}>
+        <Paper
+          className="bento-card animate-fade-in delay-200"
+          sx={{
+            p: 8,
+            textAlign: 'center',
+            borderRadius: '24px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
+          }}
+        >
           <ScheduleIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2, opacity: 0.2 }} />
           <Typography variant="h5" color="textSecondary" gutterBottom>
             No tasks yet
@@ -392,10 +435,10 @@ const Tasks: React.FC = () => {
                       {task.title}
                     </Typography>
                     <Chip
-                      label={task.status}
+                      label={task.status === 'completed' ? 'Completed' : 'Pending'}
                       color={task.status === 'completed' ? 'success' : 'default'}
                       size="small"
-                      onClick={() => handleCompleteTask(task.id)}
+                      onClick={() => handleToggleTaskStatus(task.id, task.status)}
                       clickable
                       icon={task.status === 'completed' ? <CheckCircleIcon /> : undefined}
                     />
@@ -412,17 +455,7 @@ const Tasks: React.FC = () => {
                       variant="outlined"
                       size="small"
                     />
-                    {(task.research_sources || task.wiki_summary || task.academic_sources) && (
-                      <Chip
-                        label="Research"
-                        size="small"
-                        icon={<SearchIcon />}
-                        onClick={() => handleOpenResearch(task)}
-                        clickable
-                        color="primary"
-                        variant="outlined"
-                      />
-                    )}
+
                   </Box>
 
                   <Grid container spacing={2}>
@@ -456,7 +489,30 @@ const Tasks: React.FC = () => {
         </Grid>
       ) : (
         // Desktop Table View
-        <Paper className="bento-card animate-fade-in delay-200" sx={{ p: 0, overflow: 'hidden' }}>
+        <Paper
+          className="bento-card animate-fade-in delay-200"
+          sx={{
+            p: 0,
+            overflow: 'hidden',
+            borderRadius: '24px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+            position: 'relative'
+          }}
+        >
+          {/* Watermark Icon */}
+          <Typography
+            sx={{
+              position: 'absolute',
+              top: -20,
+              right: 20,
+              fontSize: '120px',
+              opacity: 0.03,
+              pointerEvents: 'none',
+              zIndex: 0
+            }}
+          >
+            📝
+          </Typography>
           <TableContainer>
             <Table>
               <TableHead sx={{ bgcolor: 'rgba(0,0,0,0.02)' }}>
@@ -464,13 +520,12 @@ const Tasks: React.FC = () => {
                   <TableCell sx={{ fontWeight: 600, py: 3 }}>Title</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Course</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Priority</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Due Date</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Time Left</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Est. Hours</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Stress Level</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Grade %</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Research</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -500,16 +555,34 @@ const Tasks: React.FC = () => {
                         }}
                       />
                     </TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>
+                    <TableCell>
+                      {task.priority_score !== undefined ? (
+                        <Chip
+                          label={getPriorityLabel(task.priority_score).label}
+                          size="small"
+                          color={getPriorityLabel(task.priority_score).color}
+                          sx={{ fontWeight: 600 }}
+                        />
+                      ) : (
+                        <Typography variant="body2" color="textSecondary">-</Typography>
+                      )}
+                    </TableCell>
+                    <TableCell sx={{
+                      color: task.status === 'completed' ? 'text.disabled' : 'text.secondary',
+                      textDecoration: task.status === 'completed' ? 'line-through' : 'none'
+                    }}>
                       {new Date(task.due_date).toLocaleDateString()}
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: task.status === 'completed' ? 'text.secondary' : getHoursRemaining(task.due_date) === 'Overdue' ? 'error.main' : 'text.primary' }}>
-                      {getHoursRemaining(task.due_date)}
+                    <TableCell sx={{
+                      fontWeight: 600,
+                      color: task.status === 'completed' ? 'text.disabled' : getHoursRemaining(task.due_date) === 'Overdue' ? 'error.main' : 'text.primary'
+                    }}>
+                      {task.status === 'completed' ? '-' : getHoursRemaining(task.due_date)}
                     </TableCell>
                     <TableCell sx={{
                       fontWeight: 600,
                       color: task.status === 'completed'
-                        ? 'text.secondary'
+                        ? 'text.disabled'
                         : task.predicted_hours > 8
                           ? 'error.main'
                           : task.predicted_hours > 4
@@ -518,54 +591,19 @@ const Tasks: React.FC = () => {
                     }}>
                       {task.predicted_hours?.toFixed(1)}h
                     </TableCell>
-                    <TableCell sx={{ 
-                      fontWeight: 600,
-                      color: task.status === 'completed' ? 'text.secondary' :
-                            task.stress_level === 'high' ? 'error.main' :
-                            task.stress_level === 'medium' ? 'warning.main' :
-                            task.stress_level === 'low' ? 'success.main' : 'text.secondary'
-                    }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          bgcolor: task.stress_level === 'high' ? 'error.main' :
-                                  task.stress_level === 'medium' ? 'warning.main' :
-                                  task.stress_level === 'low' ? 'success.main' : 'grey.500'
-                        }} />
-                        {task.stress_level || 'Unknown'}
-                      </Box>
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: task.status === 'completed' ? 'text.secondary' : task.grade_percentage >= 20 ? 'error.main' : 'text.primary' }}>
+                    <TableCell sx={{ fontWeight: 600, color: task.status === 'completed' ? 'text.disabled' : task.grade_percentage >= 20 ? 'error.main' : 'text.primary' }}>
                       {task.grade_percentage}%
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={task.status}
+                        label={task.status === 'completed' ? 'Completed' : 'Pending'}
                         color={task.status === 'completed' ? 'success' : 'default'}
                         size="small"
-                        onClick={() => handleCompleteTask(task.id)}
+                        onClick={() => handleToggleTaskStatus(task.id, task.status)}
                         clickable
                         variant={task.status === 'completed' ? 'filled' : 'outlined'}
                         icon={task.status === 'completed' ? <CheckCircleIcon /> : undefined}
                       />
-                    </TableCell>
-                    <TableCell>
-                      {(task.research_sources || task.wiki_summary || task.academic_sources) ? (
-                        <Button
-                          size="small"
-                          startIcon={<SearchIcon />}
-                          onClick={() => handleOpenResearch(task)}
-                          variant="outlined"
-                        >
-                          Research
-                        </Button>
-                      ) : (
-                        <Typography variant="body2" color="textSecondary">
-                          No data
-                        </Typography>
-                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -628,12 +666,8 @@ const Tasks: React.FC = () => {
         </Box>
       </Dialog>
 
-      <TaskResearchDialog
-        task={researchTask}
-        open={openResearchDialog}
-        onClose={handleCloseResearch}
-      />
-    </Container>
+
+    </Container >
   );
 };
 

@@ -263,7 +263,7 @@ const Survey: React.FC = () => {
 
       <Box sx={{ mb: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
             Tasks ({items.length})
           </Typography>
           <Box sx={{ display: 'flex', gap: 2 }}>
@@ -271,6 +271,7 @@ const Survey: React.FC = () => {
               variant="outlined"
               onClick={handleGenerateSample}
               disabled={loading || generating}
+              sx={{ borderRadius: '12px' }}
             >
               {generating ? <CircularProgress size={20} /> : 'Generate Sample'}
             </Button>
@@ -279,6 +280,7 @@ const Survey: React.FC = () => {
               startIcon={<AddIcon />}
               onClick={handleAddItem}
               disabled={loading || generating}
+              sx={{ borderRadius: '12px' }}
             >
               Add Task
             </Button>
@@ -286,173 +288,211 @@ const Survey: React.FC = () => {
         </Box>
 
         {items.map((item, index) => (
-          <Card key={index} sx={{ mb: 2 }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                  Task {index + 1}
-                </Typography>
-                <Button
-                  size="small"
-                  color="error"
-                  startIcon={<DeleteIcon />}
-                  onClick={() => handleRemoveItem(index)}
-                  disabled={items.length === 1}
-                >
-                  Remove
-                </Button>
-              </Box>
+          <Paper
+            key={index}
+            sx={{
+              mb: 3,
+              p: 3,
+              borderRadius: '24px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
+            }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                Task {index + 1}
+              </Typography>
+              <Button
+                size="small"
+                color="error"
+                startIcon={<DeleteIcon />}
+                onClick={() => handleRemoveItem(index)}
+                disabled={items.length === 1}
+              >
+                Remove
+              </Button>
+            </Box>
 
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Task Title *"
-                    value={item.task_title}
-                    onChange={(e) => handleItemChange(index, 'task_title', e.target.value)}
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Task Title *"
+                  value={item.task_title}
+                  onChange={(e) => handleItemChange(index, 'task_title', e.target.value)}
+                  disabled={loading}
+                  variant="outlined"
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Task Type"
+                  value={item.task_type}
+                  onChange={(e) => handleItemChange(index, 'task_type', e.target.value)}
+                  disabled={loading}
+                  SelectProps={{
+                    native: true,
+                  }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+                >
+                  <option value="Assignment">Assignment</option>
+                  <option value="Exam">Exam</option>
+                  <option value="Quiz">Quiz</option>
+                  <option value="Project">Project</option>
+                  <option value="Reading">Reading</option>
+                  <option value="Lab">Lab</option>
+                </TextField>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  type="date"
+                  label="Due Date *"
+                  value={item.due_date}
+                  onChange={(e) => handleItemChange(index, 'due_date', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  disabled={loading}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Weight Percentage (0-100)"
+                  value={item.grade_percentage}
+                  onChange={(e) => handleItemChange(index, 'grade_percentage', parseFloat(e.target.value))}
+                  disabled={loading}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Estimated Hours"
+                  value={item.estimated_hours}
+                  onChange={(event) => handleItemChange(index, 'estimated_hours', parseFloat(event.target.value))}
+                  disabled={loading}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Actual Hours Spent"
+                  value={item.actual_hours}
+                  onChange={(event) => handleItemChange(index, 'actual_hours', parseFloat(event.target.value))}
+                  disabled={loading}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <Box sx={{ p: 2, border: '1px solid rgba(0,0,0,0.1)', borderRadius: '12px' }}>
+                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                    Difficulty Level: {item.difficulty_level}/5
+                  </Typography>
+                  <Slider
+                    value={item.difficulty_level}
+                    onChange={(_event, value) => handleItemChange(index, 'difficulty_level', value)}
+                    min={1}
+                    max={5}
+                    marks
                     disabled={loading}
                   />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    select
-                    label="Task Type"
-                    value={item.task_type}
-                    onChange={(e) => handleItemChange(index, 'task_type', e.target.value)}
+                </Box>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Box sx={{ p: 2, border: '1px solid rgba(0,0,0,0.1)', borderRadius: '12px' }}>
+                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                    Priority Rating: {item.priority_rating}/5
+                  </Typography>
+                  <Slider
+                    value={item.priority_rating}
+                    onChange={(_event, value) => handleItemChange(index, 'priority_rating', value)}
+                    min={1}
+                    max={5}
+                    marks
                     disabled={loading}
-                    SelectProps={{
-                      native: true,
-                    }}
-                  >
-                    <option value="Assignment">Assignment</option>
-                    <option value="Exam">Exam</option>
-                    <option value="Quiz">Quiz</option>
-                    <option value="Project">Project</option>
-                    <option value="Reading">Reading</option>
-                    <option value="Lab">Lab</option>
-                  </TextField>
-                </Grid>
+                  />
+                </Box>
+              </Grid>
 
+              <Grid item xs={12} sm={6}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={item.completed}
+                      onChange={(e) => handleItemChange(index, 'completed', e.target.checked)}
+                      disabled={loading}
+                    />
+                  }
+                  label="Completed"
+                  sx={{ ml: 1 }}
+                />
+              </Grid>
+              {item.completed && (
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
                     type="date"
-                    label="Due Date *"
-                    value={item.due_date}
-                    onChange={(e) => handleItemChange(index, 'due_date', e.target.value)}
+                    label="Completion Date"
+                    value={item.completion_date}
+                    onChange={(e) => handleItemChange(index, 'completion_date', e.target.value)}
                     InputLabelProps={{ shrink: true }}
                     disabled={loading}
+                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    type="number"
-                    label="Weight Percentage (0-100)"
-                    value={item.grade_percentage}
-                    onChange={(e) => handleItemChange(index, 'grade_percentage', parseFloat(e.target.value))}
-                    disabled={loading}
-                  />
-                </Grid>
+              )}
 
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    type="number"
-                    label="Estimated Hours"
-                    value={item.estimated_hours}
-                    onChange={(event) => handleItemChange(index, 'estimated_hours', parseFloat(event.target.value))}
-                    disabled={loading}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    type="number"
-                    label="Actual Hours Spent"
-                    value={item.actual_hours}
-                    onChange={(event) => handleItemChange(index, 'actual_hours', parseFloat(event.target.value))}
-                    disabled={loading}
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      Difficulty Level: {item.difficulty_level}/5
-                    </Typography>
-                    <Slider
-                      value={item.difficulty_level}
-                      onChange={(_event, value) => handleItemChange(index, 'difficulty_level', value)}
-                      min={1}
-                      max={5}
-                      marks
-                      disabled={loading}
-                    />
-                  </Box>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      Priority Rating: {item.priority_rating}/5
-                    </Typography>
-                    <Slider
-                      value={item.priority_rating}
-                      onChange={(_event, value) => handleItemChange(index, 'priority_rating', value)}
-                      min={1}
-                      max={5}
-                      marks
-                      disabled={loading}
-                    />
-                  </Box>
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={item.completed}
-                        onChange={(e) => handleItemChange(index, 'completed', e.target.checked)}
-                        disabled={loading}
-                      />
-                    }
-                    label="Completed"
-                  />
-                </Grid>
-                {item.completed && (
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      type="date"
-                      label="Completion Date"
-                      value={item.completion_date}
-                      onChange={(e) => handleItemChange(index, 'completion_date', e.target.value)}
-                      InputLabelProps={{ shrink: true }}
-                      disabled={loading}
-                    />
-                  </Grid>
-                )}
-
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={3}
-                    label="Notes (optional)"
-                    value={item.notes}
-                    onChange={(e) => handleItemChange(index, 'notes', e.target.value)}
-                    disabled={loading}
-                  />
-                </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label="Notes (optional)"
+                  value={item.notes}
+                  onChange={(e) => handleItemChange(index, 'notes', e.target.value)}
+                  disabled={loading}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+                />
               </Grid>
-            </CardContent>
-          </Card>
+            </Grid>
+          </Paper>
         ))}
       </Box>
 
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
+      <Paper
+        sx={{
+          p: 4,
+          mb: 3,
+          borderRadius: '24px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        <Typography
+          sx={{
+            position: 'absolute',
+            top: -10,
+            right: 20,
+            fontSize: '100px',
+            opacity: 0.03,
+            pointerEvents: 'none',
+            zIndex: 0
+          }}
+        >
+          📋
+        </Typography>
+        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
           Additional Feedback (Optional)
         </Typography>
         <TextField

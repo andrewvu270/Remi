@@ -373,7 +373,7 @@ const SmartTaskAssistant: React.FC = () => {
                 Smart Task Assistant
               </Typography>
               <Typography variant="body2" color="textSecondary">
-                AI-powered task analysis and optimization
+                Smart task analysis and optimization with your Study Buddy
               </Typography>
             </Box>
             {isLoading && (

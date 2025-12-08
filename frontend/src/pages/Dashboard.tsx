@@ -17,12 +17,11 @@ import {
   AccessTime as DueSoonIcon,
   Dashboard as DashboardIcon,
   Analytics as AnalyticsIcon,
-  Timer as TimerIcon,
+  CloudUpload as CloudUploadIcon,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
-import NaturalLanguageQuery from '../components/NaturalLanguageQuery';
-import PomodoroTimer from '../components/PomodoroTimer';
 import AnalyticsDashboard from '../components/AnalyticsDashboard';
 import { agentService } from '../utils/agentService';
 
@@ -122,12 +121,12 @@ const fetchSupabaseTasks = async (): Promise<StoredTask[] | null> => {
 };
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [statsSnapshot, setStatsSnapshot] = useState(() => computeStats(getLocalTasks()));
-  const [activeView, setActiveView] = useState<'overview' | 'analytics' | 'focus'>('overview');
-  const [showFab, setShowFab] = useState(false);
+  const [activeView, setActiveView] = useState<'overview' | 'analytics'>('overview');
   const [previewTasks, setPreviewTasks] = useState<StoredTask[]>(getUpcomingTasks(getLocalTasks()));
   const [analysisInsight, setAnalysisInsight] = useState<{
     fileName: string;
@@ -157,8 +156,6 @@ const Dashboard = () => {
 
   useEffect(() => {
     refreshStats();
-    // Show FAB after a delay
-    setTimeout(() => setShowFab(true), 1000);
   }, [refreshStats]);
 
   const readFileContent = (file: File) => {
@@ -186,7 +183,7 @@ const Dashboard = () => {
         user_id: userId,
       });
 
-      const summary = response.summary || response.message || 'Analysis complete. Ask the AI assistant for next steps.';
+      const summary = response.summary || response.message || 'Analysis complete. Ask your Study Buddy for next steps.';
       const nextStep = response.next_action || response.recommended_action || response.status;
 
       setAnalysisInsight({
@@ -306,7 +303,7 @@ const Dashboard = () => {
 
       setUploadMessage({
         type: 'success',
-        text: 'Files processed. Ask the AI assistant for next-step planning or scheduling.'
+        text: 'Files processed. Ask your Study Buddy for next-step planning or scheduling.'
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to handle files';
@@ -323,309 +320,293 @@ const Dashboard = () => {
       value: statsSnapshot.completed,
       icon: CompletedIcon,
       color: '#388e3c',
-      bgGradient: 'linear-gradient(135deg, #4caf50, #66bb6a)'
+      bgGradient: 'linear-gradient(135deg, #4caf50, #66bb6a)',
+      filter: 'completed'
     },
     {
       label: 'Pending',
       value: statsSnapshot.pending,
       icon: PendingIcon,
       color: '#f57c00',
-      bgGradient: 'linear-gradient(135deg, #ff9800, #ffb74d)'
+      bgGradient: 'linear-gradient(135deg, #ff9800, #ffb74d)',
+      filter: 'pending'
     },
     {
       label: 'Due Soon',
       value: statsSnapshot.dueSoon,
       icon: DueSoonIcon,
       color: '#d32f2f',
-      bgGradient: 'linear-gradient(135deg, #f44336, #ef5350)'
+      bgGradient: 'linear-gradient(135deg, #f44336, #ef5350)',
+      filter: 'dueSoon'
     },
   ];
 
   return (
-    <>
-      {/* Floating Action Button for Quick Actions */}
-      <AnimatePresence>
-        {showFab && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0 }}
-            transition={{ type: "spring", duration: 0.5 }}
-            style={{
-              position: 'fixed',
-              bottom: 24,
-              right: 24,
-              zIndex: 1000
-            }}
-          >
-            <Fab
-              color="primary"
-              aria-label="quick-actions"
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Box sx={{ mb: 5 }}>
+        <Typography variant="h2" component="h1" sx={{ mb: 1 }}>
+          Welcome back
+        </Typography>
+        <Typography variant="body1" color="textSecondary" sx={{ mb: 3 }}>
+          A streamlined workspace that mirrors the landing-page flow.
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          {[
+            { id: 'overview', label: 'Overview', icon: <DashboardIcon fontSize="small" /> },
+            { id: 'analytics', label: 'Analytics', icon: <AnalyticsIcon fontSize="small" /> },
+          ].map((view) => (
+            <Button
+              key={view.id}
+              variant={activeView === view.id ? 'contained' : 'outlined'}
+              onClick={() => setActiveView(view.id as 'overview' | 'analytics')}
+              startIcon={view.icon}
               sx={{
-                background: 'linear-gradient(135deg, #1976d2, #42a5f5)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #1565c0, #2196f3)',
-                }
+                borderRadius: '999px',
+                textTransform: 'none',
               }}
             >
-              <DashboardIcon />
-            </Fab>
+              {view.label}
+            </Button>
+          ))}
+        </Box>
+      </Box>
+
+      {/* Animated Stats Grid */}
+      <AnimatePresence mode="wait">
+        {activeView === 'overview' && (
+          <motion.div
+            key="overview"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Grid container spacing={3} sx={{ mb: 4 }}>
+              {stats.map((stat) => (
+                <Grid item xs={12} md={4} key={stat.label}>
+                  <Paper
+                    onClick={() => navigate(`/tasks?filter=${stat.filter}`)}
+                    sx={{
+                      p: 3,
+                      borderRadius: '20px',
+                      color: '#fff',
+                      background: stat.bgGradient,
+                      boxShadow: '0 12px 30px rgba(0,0,0,0.12)',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: '0 16px 40px rgba(0,0,0,0.2)'
+                      }
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                      <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                        {stat.value}
+                      </Typography>
+                      <stat.icon />
+                    </Box>
+                    <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>
+                      {stat.label}
+                    </Typography>
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
+
+            <Grid container spacing={3} sx={{ mb: 4 }}>
+              <Grid item xs={12} md={7}>
+                <Paper
+                  sx={{
+                    p: 4,
+                    borderRadius: '24px',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                    bgcolor: '#fff',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
+                  }}
+                >
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                    <Box>
+                      <Typography variant="h5" sx={{ mb: 1, fontWeight: 600, color: 'primary.dark' }}>
+                        Smart Scheduling
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ maxWidth: '90%' }}>
+                        Remi analyzes your syllabus and automatically builds a balanced study plan for you.
+                      </Typography>
+                    </Box>
+                    <Typography variant="h3" sx={{ opacity: 0.1 }}>📅</Typography>
+                  </Box>
+
+                  {previewTasks.length > 0 ? (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1, mt: 2 }}>
+                      {previewTasks.map((task, index) => (
+                        <Paper
+                          key={task.id}
+                          elevation={0}
+                          sx={{
+                            p: 2.5,
+                            borderRadius: '16px',
+                            bgcolor: index % 2 === 0 ? '#E3F2FD' : '#F8F9FA',
+                            borderLeft: index % 2 === 0 ? '6px solid #64B5F6' : '6px solid transparent',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            transition: 'all 0.2s',
+                            '&:hover': {
+                              transform: 'translateX(4px)',
+                              bgcolor: '#E1F5FE'
+                            }
+                          }}
+                        >
+                          <Box>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                              {task.title}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Due {new Date(task.due_date || '').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                            </Typography>
+                          </Box>
+                          <Button size="small" variant="text" onClick={() => window.location.assign('/schedule')}>
+                            View
+                          </Button>
+                        </Paper>
+                      ))}
+                    </Box>
+                  ) : (
+                    <Box sx={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: '#F8F9FA',
+                      borderRadius: '16px',
+                      mt: 2,
+                      p: 3
+                    }}>
+                      <Typography variant="body2" color="text.secondary" align="center">
+                        No upcoming tasks detected yet. Upload a syllabus to let Remi generate a plan!
+                      </Typography>
+                    </Box>
+                  )}
+                </Paper>
+              </Grid>
+
+              <Grid item xs={12} md={5}>
+                <Paper
+                  sx={{
+                    p: 4,
+                    borderRadius: '24px',
+                    height: '100%',
+                    bgcolor: '#E1F5FE', // Light blue background
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}
+                >
+                  <Typography variant="h5" sx={{ mb: 1, fontWeight: 600, color: 'primary.dark' }}>
+                    File Intake
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                    Drop any syllabus, assignment brief, or reference file. Remi will scan it instantly.
+                  </Typography>
+
+                  {/* Dashed Drop Zone */}
+                  <Box
+                    component="label"
+                    sx={{
+                      p: 4,
+                      border: '2px dashed #64B5F6',
+                      borderRadius: '24px',
+                      textAlign: 'center',
+                      bgcolor: 'rgba(255,255,255,0.6)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      '&:hover': { bgcolor: '#fff', borderColor: '#2196F3', transform: 'scale(1.02)' },
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minHeight: '200px'
+                    }}
+                  >
+                    {uploading ? (
+                      <CircularProgress size={32} />
+                    ) : (
+                      <>
+                        <CloudUploadIcon sx={{ fontSize: 40, color: 'primary.main', mb: 2 }} />
+                        <Typography variant="subtitle1" fontWeight="bold" color="primary.main">
+                          Drop Syllabus Here
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          or click to browse
+                        </Typography>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      multiple
+                      accept="*/*"
+                      hidden
+                      onChange={handleFileUpload}
+                      disabled={uploading}
+                    />
+                  </Box>
+
+                  {analysisError && (
+                    <Alert severity="error" sx={{ mt: 2, borderRadius: '12px' }}>
+                      {analysisError}
+                    </Alert>
+                  )}
+
+                  {analysisInsight && !analysisError && (
+                    <Paper sx={{ mt: 3, p: 2, borderRadius: '16px', bgcolor: 'rgba(255,255,255,0.8)' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                        Latest insight ({analysisInsight.fileName})
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }}>
+                        "{analysisInsight.summary}"
+                      </Typography>
+                    </Paper>
+                  )}
+                </Paper>
+              </Grid>
+            </Grid>
+
+          </motion.div>
+        )}
+
+        {activeView === 'analytics' && (
+          <motion.div
+            key="analytics-content"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.3 }}
+          >
+            <AnalyticsDashboard />
           </motion.div>
         )}
       </AnimatePresence>
 
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box sx={{ mb: 5 }}>
-          <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
-            Welcome back
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-            A streamlined workspace that mirrors the landing-page flow.
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            {[
-              { id: 'overview', label: 'Overview', icon: <DashboardIcon fontSize="small" /> },
-              { id: 'analytics', label: 'Analytics', icon: <AnalyticsIcon fontSize="small" /> },
-              { id: 'focus', label: 'Focus Mode', icon: <TimerIcon fontSize="small" /> },
-            ].map((view) => (
-              <Button
-                key={view.id}
-                variant={activeView === view.id ? 'contained' : 'outlined'}
-                onClick={() => setActiveView(view.id as 'overview' | 'analytics' | 'focus')}
-                startIcon={view.icon}
-                sx={{
-                  borderRadius: '999px',
-                  textTransform: 'none',
-                }}
-              >
-                {view.label}
-              </Button>
-            ))}
-          </Box>
-        </Box>
+      {/* Upload Message */}
+      <AnimatePresence>
+        {uploadMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Alert severity={uploadMessage.type} sx={{ mb: 4, borderRadius: '16px' }}>
+              {uploadMessage.text}
+            </Alert>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* Animated Stats Grid */}
-        <AnimatePresence mode="wait">
-          {activeView === 'overview' && (
-            <motion.div
-              key="overview"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Grid container spacing={3} sx={{ mb: 4 }}>
-                {stats.map((stat) => (
-                  <Grid item xs={12} md={4} key={stat.label}>
-                    <Paper
-                      sx={{
-                        p: 3,
-                        borderRadius: '20px',
-                        color: '#fff',
-                        background: stat.bgGradient,
-                        boxShadow: '0 12px 30px rgba(0,0,0,0.12)'
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                        <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                          {stat.value}
-                        </Typography>
-                        <stat.icon />
-                      </Box>
-                      <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>
-                        {stat.label}
-                      </Typography>
-                    </Paper>
-                  </Grid>
-                ))}
-              </Grid>
-
-              <Grid container spacing={3} sx={{ mb: 4 }}>
-                <Grid item xs={12} md={7}>
-                  <Paper sx={{ p: 4, borderRadius: '24px' }}>
-                    <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
-                      Smart Scheduling
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                      Upcoming tasks pulled directly from your documents and uploads.
-                    </Typography>
-                    {previewTasks.length > 0 ? (
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        {previewTasks.map((task) => (
-                          <Paper
-                            key={task.id}
-                            variant="outlined"
-                            sx={{
-                              p: 2.5,
-                              borderRadius: '18px',
-                              borderColor: 'rgba(0,0,0,0.08)',
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                            }}
-                          >
-                            <Box>
-                              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                                {task.title}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                Due {new Date(task.due_date || '').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                              </Typography>
-                            </Box>
-                            <Button size="small" variant="outlined" onClick={() => window.location.assign('/schedule')}>
-                              View plan
-                            </Button>
-                          </Paper>
-                        ))}
-                      </Box>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">
-                        No upcoming tasks detected yet. Upload a file or add tasks to see your personalized plan.
-                      </Typography>
-                    )}
-                  </Paper>
-                </Grid>
-
-                <Grid item xs={12} md={5}>
-                  <Paper
-                    sx={{
-                      p: 4,
-                      borderRadius: '24px',
-                      height: '100%',
-                      border: '2px dashed rgba(0,0,0,0.08)'
-                    }}
-                  >
-                    <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
-                      File Intake
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                      Drop any syllabus, assignment brief, or reference file. The agent will decide whether to schedule it or offer assistance.
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      component="label"
-                      disabled={uploading}
-                      sx={{
-                        minWidth: '180px',
-                        mb: 2,
-                        background: 'linear-gradient(135deg, #1976d2, #42a5f5)'
-                      }}
-                    >
-                      {uploading ? <CircularProgress size={22} color="inherit" /> : 'Upload files'}
-                      <input
-                        type="file"
-                        multiple
-                        accept="*/*"
-                        hidden
-                        onChange={handleFileUpload}
-                        disabled={uploading}
-                      />
-                    </Button>
-
-                    {analysisError && (
-                      <Alert severity="error" sx={{ mt: 2 }}>
-                        {analysisError}
-
-                      </Alert>
-                    )}
-
-                    {analysisInsight && !analysisError && (
-                      <Box sx={{ mt: 3 }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                          Latest insight ({analysisInsight.fileName})
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                          {analysisInsight.summary}
-                        </Typography>
-                        {analysisInsight.nextStep && (
-                          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                            Suggested next step: {analysisInsight.nextStep}
-                          </Typography>
-                        )}
-                      </Box>
-                    )}
-
-                    {uploadedFiles.length > 0 && (
-                      <Box sx={{ mt: 3 }}>
-                        <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                          Recent uploads
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                          {uploadedFiles.slice(-3).map((file) => (
-                            <Paper key={file} variant="outlined" sx={{ p: 1.5, borderRadius: '12px' }}>
-                              <Typography variant="caption">{file}</Typography>
-                            </Paper>
-                          ))}
-                        </Box>
-                      </Box>
-                    )}
-                  </Paper>
-                </Grid>
-              </Grid>
-
-              <Box sx={{ mb: 4 }}>
-                <NaturalLanguageQuery />
-              </Box>
-
-            </motion.div>
-          )}
-
-          {activeView === 'analytics' && (
-            <motion.div
-              key="analytics-content"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.3 }}
-            >
-              <AnalyticsDashboard />
-            </motion.div>
-          )}
-
-          {activeView === 'focus' && (
-            <motion.div
-              key="focus-content"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Box sx={{ mb: 4 }}>
-                <Typography variant="h5" sx={{ mb: 2, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <TimerIcon color="primary" />
-                  Focus Mode
-                </Typography>
-                <Typography variant="body1" color="textSecondary">
-                  Boost your productivity with gamified focus sessions and achievement tracking
-                </Typography>
-              </Box>
-              <PomodoroTimer
-                taskTitle="Focus Session"
-                learningStyle="visual"
-                studyTips={["Take regular breaks", "Stay hydrated", "Minimize distractions"]}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Upload Message */}
-        <AnimatePresence>
-          {uploadMessage && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Alert severity={uploadMessage.type} sx={{ mb: 4, borderRadius: '16px' }}>
-                {uploadMessage.text}
-              </Alert>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-      </Container>
-    </>
+    </Container>
   );
 };
 

@@ -4,7 +4,6 @@ import {
   TextField,
   Typography,
   Button,
-  Paper,
   Chip,
   LinearProgress
 } from '@mui/material';
@@ -109,9 +108,8 @@ const ReflectionEditor: React.FC<ReflectionEditorProps> = ({
   };
 
   return (
-    <Paper sx={{ p: 3 }}>
+    <Box>
       <Box sx={{ mb: 3 }}>
-        <Typography variant="h6" sx={{ mb: 1 }}>Session Reflection</Typography>
         <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
           Take a moment to reflect on your study session. This helps improve future sessions.
         </Typography>
@@ -234,7 +232,7 @@ const ReflectionEditor: React.FC<ReflectionEditorProps> = ({
           Suggest actionable improvements • Aim for 50+ words total for best insights
         </Typography>
       </Box>
-    </Paper>
+    </Box>
   );
 };
 

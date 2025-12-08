@@ -5,10 +5,11 @@ Coordinates all MyDesk agents, manages workflow, maintains context,
 and integrates agent outputs into cohesive responses.
 """
 
+import logging
 from typing import Any, Dict, List, Optional
 from datetime import datetime
-import logging
 
+from ..database import get_supabase_admin
 from .agent_base import AgentResponse, AgentStatus
 from .task_parsing_agent import task_parsing_agent
 from .enhanced_task_parsing_agent import enhanced_task_parsing_agent
@@ -222,6 +223,21 @@ class OrchestratorAgent:
     ) -> Dict[str, Any]:
         """Workflow: Process natural language query"""
         self.logger.info("Starting natural language workflow")
+
+        # Enrich context with user tasks
+        user_id = self.context.get("user_id")
+        if user_id:
+            try:
+                tasks = await self._fetch_user_tasks(user_id)
+                self.context["tasks"] = tasks
+                # Also create a summary for better prompting
+                pending_tasks = [t for t in tasks if t.get("status") != "completed"]
+                self.context["task_summary"] = {
+                    "total_pending": len(pending_tasks),
+                    "due_soon": [t["title"] for t in pending_tasks[:5]] # Simple heuristic
+                }
+            except Exception as e:
+                self.logger.warning(f"Failed to fetch context tasks: {e}")
 
         # Step 1: Parse query
         nl_response = await self.agents["natural_language"]._execute_with_error_handling(
@@ -495,6 +511,17 @@ class OrchestratorAgent:
                 "error": str(e),
                 "workflow": "full_pipeline_enhanced"
             }
+
+
+    async def _fetch_user_tasks(self, user_id: str) -> List[Dict[str, Any]]:
+        """Fetch tasks for a specific user to provide context"""
+        try:
+            supabase = get_supabase_admin()
+            response = supabase.table("tasks").select("*").eq("user_id", user_id).order("due_date", desc=False).execute()
+            return response.data if response.data else []
+        except Exception as e:
+            self.logger.error(f"Error fetching user tasks for context: {str(e)}")
+            return []
 
 
 # Create singleton instance

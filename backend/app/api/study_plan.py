@@ -193,6 +193,7 @@ def smart_schedule_sessions(tasks: List[Dict[str, Any]], study_hours_per_day: in
                 'id': f"session-{len(schedule)}",  # Add unique ID
                 'task_id': task_to_schedule['task'].get('id', ''),
                 'task_title': task_to_schedule['task']['title'],
+                'course_code': task_to_schedule['task'].get('course_code'),
                 'day': current_date.strftime('%Y-%m-%d'),
                 'priority': task_to_schedule['priority'],
                 'estimated_hours': round(session_hours, 1)
