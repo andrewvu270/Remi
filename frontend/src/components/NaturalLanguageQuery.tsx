@@ -154,7 +154,7 @@ const NaturalLanguageQuery: React.FC = () => {
           border: '1px solid',
           borderColor: 'grey.200'
         }}>
-          <Typography variant="body1" sx={{ mb: 2, lineHeight: 1.6 }}>
+          <Typography variant="body1" sx={{ mb: 2, lineHeight: 1.6, color: 'text.primary', fontWeight: 500 }}>
             {response.response}
           </Typography>
 

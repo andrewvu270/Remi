@@ -132,15 +132,16 @@ class LLMService:
         """
         try:
             prompt = self._build_nl_query_prompt(query, context)
-            prompt = await self._refine_prompt(
-                prompt,
-                target_agent="NaturalLanguageAgent",
-                goal="Interpret the user query accurately and return actionable insights.",
-            )
+            # TEMPORARILY DISABLED: Prompt refinement was causing invalid JSON output
+            # prompt = await self._refine_prompt(
+            #     prompt,
+            #     target_agent="NaturalLanguageAgent",
+            #     goal="Interpret the user query accurately and return actionable insights.",
+            # )
             
             response = await self.client_manager.chat_completion(
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant that interprets user queries about tasks and schedules. Extract the intent and parameters."},
+                    {"role": "system", "content": "You are a helpful assistant that interprets user queries about tasks and schedules. You MUST respond with valid JSON only, no other text."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.2
@@ -258,7 +259,7 @@ Consider:
         """Build prompt for natural language query parsing"""
         context_str = json.dumps(context, indent=2) if context else "None"
         
-        return f"""Parse this user query:
+        return f"""Parse this user query and provide a helpful response:
 
 Query: "{query}"
 
@@ -266,12 +267,19 @@ Context:
 {context_str}
 
 Provide a JSON response with:
-- intent: the user's intent (e.g., "view_schedule", "move_task", "get_insights")
-- parameters: extracted parameters (dates, task IDs, filters)
-- action: suggested action to take
-- response: natural language response to the user
+- intent: the user's intent (e.g., "view_schedule", "move_task", "get_insights", "unknown")
+- parameters: extracted parameters (dates, task IDs, filters) - empty object {{}} if none
+- action: suggested action to take - empty string "" if none
+- response: A MANDATORY natural language response to the user. ALWAYS provide a helpful response, even if intent is unknown.
 
-Be helpful and interpret the user's intent accurately."""
+Examples:
+1. Query: "What's my busiest day this week?"
+   Response: {{"intent": "get_insights", "parameters": {{"time_range": "week"}}, "action": "", "response": "Based on your current schedule, your busiest day this week appears to be [day with most tasks]. You have [X] tasks scheduled."}}
+
+2. Query: "test"
+   Response: {{"intent": "unknown", "parameters": {{}}, "action": "", "response": "I'm here to help! I can answer questions about your schedule, tasks, and deadlines. Try asking 'What's my busiest day?' or 'Show me high-priority tasks'."}}
+
+IMPORTANT: The 'response' field must NEVER be empty. Always provide a conversational, helpful response to the user."""
     
     def _build_extraction_prompt(self, text: str, source_type: str) -> str:
         """Build prompt for task extraction"""
