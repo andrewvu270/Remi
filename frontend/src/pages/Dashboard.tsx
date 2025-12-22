@@ -8,7 +8,6 @@ import {
   Grid,
   CircularProgress,
   Alert,
-  Fab
 } from '@mui/material';
 
 import {
@@ -122,7 +121,6 @@ const fetchSupabaseTasks = async (): Promise<StoredTask[] | null> => {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [statsSnapshot, setStatsSnapshot] = useState(() => computeStats(getLocalTasks()));
@@ -183,8 +181,13 @@ const Dashboard = () => {
         user_id: userId,
       });
 
-      const summary = response.summary || response.message || 'Analysis complete. Ask your Study Buddy for next steps.';
+      const summary = response.summary || response.message;
       const nextStep = response.next_action || response.recommended_action || response.status;
+
+      // Only show meaningful insights, not generic messages
+      if (!summary || summary === 'Analysis complete. Ask your Study Buddy for next steps.') {
+        return; // Don't show generic messages
+      }
 
       setAnalysisInsight({
         fileName: file.name,
@@ -296,9 +299,10 @@ const Dashboard = () => {
           await processPdfUpload(file);
           await refreshStats();
         }
+      }
 
+      for (const file of Array.from(files)) {
         await analyzeFileWithAgent(file);
-        setUploadedFiles((prev) => [...prev, file.name]);
       }
 
       setUploadMessage({

@@ -19,7 +19,7 @@ const GlobalStudyBuddy: React.FC = () => {
     setTimeout(() => setShowFab(true), 1000);
   }, []);
 
-  if (location.pathname === '/') {
+  if (location.pathname === '/' || location.pathname === '/auth' || location.pathname === '/register') {
     return null;
   }
 
