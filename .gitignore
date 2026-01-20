@@ -67,6 +67,7 @@ temp/
 
 # ML Models (generated)
 backend/models/*.txt
+backend/poppler
 
 # Docker
 .dockerignore
